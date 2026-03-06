@@ -27,6 +27,7 @@ const settingsPatchSchema = z
     chatSkipCommandEnabled: z.boolean(),
     chatPauseCommandEnabled: z.boolean(),
     chatStopCommandEnabled: z.boolean(),
+    chatLinksEnabled: z.boolean(),
     skipShortcut: z.string().min(1).nullable(),
     pauseShortcut: z.string().min(1).nullable(),
     stopShortcut: z.string().min(1).nullable(),
@@ -59,6 +60,7 @@ function defaults(): Settings {
     chatSkipCommandEnabled: false,
     chatPauseCommandEnabled: false,
     chatStopCommandEnabled: false,
+    chatLinksEnabled: true,
     skipShortcut: null,
     pauseShortcut: null,
     stopShortcut: null,
@@ -127,6 +129,11 @@ export class SettingsService {
 
     if (typeof existing.chatStopCommandEnabled !== "boolean") {
       existing.chatStopCommandEnabled = false;
+      this.store.set("settings", existing);
+    }
+
+    if (typeof existing.chatLinksEnabled !== "boolean") {
+      existing.chatLinksEnabled = true;
       this.store.set("settings", existing);
     }
 

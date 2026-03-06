@@ -640,6 +640,11 @@ function normalizeRequester(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function looksLikeLink(value: string): boolean {
+  const trimmed = value.trim();
+  return /^(https?:\/\/|www\.|(?:music\.)?youtube\.com\/|youtu\.be\/)/i.test(trimmed);
+}
+
 function getRequesterActiveTrackCount(requester: string): number {
   const normalizedRequester = normalizeRequester(requester);
   let count = 0;
@@ -781,6 +786,12 @@ function clearUpcomingQueue(): number {
 
 async function processPlayCommand(speaker: string, query: string): Promise<void> {
   pushLog(`Command from ${speaker}: ${query}`);
+
+  if (!settingsService.getSettings().chatLinksEnabled && looksLikeLink(query)) {
+    pushLog(`Rejected link from ${speaker}: chat links are disabled.`);
+    await sendChatMessage("Links in chat are disabled.");
+    return;
+  }
 
   const maxTracksPerUser = Math.max(1, Math.min(20, settingsService.getSettings().maxTracksPerUser));
   const activeTrackCount = getRequesterActiveTrackCount(speaker);

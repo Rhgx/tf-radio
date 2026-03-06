@@ -20,6 +20,7 @@ export interface Settings {
   chatSkipCommandEnabled: boolean;
   chatPauseCommandEnabled: boolean;
   chatStopCommandEnabled: boolean;
+  chatLinksEnabled: boolean;
   skipShortcut: string | null;
   pauseShortcut: string | null;
   stopShortcut: string | null;

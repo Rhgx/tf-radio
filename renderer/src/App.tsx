@@ -546,6 +546,7 @@ export function App() {
       chatSkipCommandEnabled: Boolean(draft.chatSkipCommandEnabled),
       chatPauseCommandEnabled: Boolean(draft.chatPauseCommandEnabled),
       chatStopCommandEnabled: Boolean(draft.chatStopCommandEnabled),
+      chatLinksEnabled: Boolean(draft.chatLinksEnabled),
       skipShortcut: draft.skipShortcut?.trim() ? draft.skipShortcut.trim() : null,
       pauseShortcut: draft.pauseShortcut?.trim() ? draft.pauseShortcut.trim() : null,
       stopShortcut: draft.stopShortcut?.trim() ? draft.stopShortcut.trim() : null,
@@ -1113,6 +1114,24 @@ export function App() {
 
             {settingsTab === "automation" && (
               <div class="settings-pane">
+                <label class="toggle">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(draft?.chatLinksEnabled)}
+                    onChange={(event) =>
+                      setDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              chatLinksEnabled: (event.currentTarget as HTMLInputElement).checked
+                            }
+                          : current
+                      )
+                    }
+                  />
+                  <MessageSquare size={14} class="icon" />
+                  Allow links in <code>?play</code> chat commands
+                </label>
                 <label class="toggle">
                   <input
                     type="checkbox"
