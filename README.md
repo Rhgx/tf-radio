@@ -71,7 +71,7 @@ npm run dist:linux:appimage
 ## Notes
 
 - Renderer UI is built with **Preact + Vite** (no React runtime).
-- Default command scope is `self` (only your messages trigger playback).
+- Default command scope is `anyone` (any player messages can trigger playback).
 - Queue mode is FIFO.
 - Per-user queue cap is configurable in Settings (default: `1`).
 - `Clear logs upon startup` is disabled by default.

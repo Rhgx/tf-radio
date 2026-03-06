@@ -43,7 +43,7 @@ function defaults(): Settings {
     consoleLogPath: null,
     playerName: "unknown",
     commandPrefix: "?play",
-    commandScope: "self",
+    commandScope: "anyone",
     clearLogsOnStartup: false,
     rconHost: "127.0.0.1",
     rconPort: 21770,

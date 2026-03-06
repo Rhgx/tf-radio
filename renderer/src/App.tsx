@@ -807,7 +807,7 @@ export function App() {
                     Command Scope
                   </label>
                   <select
-                    value={draft?.commandScope ?? "self"}
+                    value={draft?.commandScope ?? "anyone"}
                     onChange={(event) =>
                       setDraft((current) =>
                         current
