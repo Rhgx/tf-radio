@@ -1,4 +1,4 @@
-# TF2 Radio Bot (Electron + Preact)
+# TF2 Radio Bot
 
 Electron app for Windows and Linux that listens to TF2 `console.log` for:
 
