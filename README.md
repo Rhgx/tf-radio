@@ -11,7 +11,7 @@ Electron app for Windows and Linux that listens to TF2 `console.log` for:
 It resolves tracks with `yt-dlp`, routes audio into your selected output device (VB-CABLE recommended), optionally mirrors audio to speakers, and toggles TF2 voice transmit via RCON (`+voicerecord` / `-voicerecord`); recommend unbinding your push to talk key during the duration of this.
 
 > [!CAUTION]
-> This program interacts with TF2, audio-routing tools, and local input/network behavior in ways that can trigger false positives from anti-cheat or anti-tamper systems. Use it at your own risk, and avoid running it in environments where third-party tools may be restricted.
+> This program uses RCON and reacts to in-game chat messages. That combination may be treated suspiciously by anti-cheat or moderation systems, and it has resulted in bans before. Use it at your own risk.
 >
 > ![Anti-cheat caution](src/images/ban.png)
 
