@@ -52,6 +52,20 @@ export class CommandParser {
       return this.withDedupe({ speaker, kind: "pause" }, line, offset);
     }
 
+    if (normalized === "?resume") {
+      if (!settings.chatPauseCommandEnabled) {
+        return null;
+      }
+      return this.withDedupe({ speaker, kind: "resume" }, line, offset);
+    }
+
+    if (normalized === "?stop") {
+      if (!settings.chatStopCommandEnabled) {
+        return null;
+      }
+      return this.withDedupe({ speaker, kind: "stop" }, line, offset);
+    }
+
     if (!normalized.startsWith(`${settings.commandPrefix} `)) {
       return null;
     }

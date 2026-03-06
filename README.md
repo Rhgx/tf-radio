@@ -5,6 +5,8 @@ Electron app for Windows and Linux that listens to TF2 `console.log` for:
 - `?play <youtube search query or link>`
 - `?skip`
 - `?pause`
+- `?resume`
+- `?stop`
 
 It resolves tracks with `yt-dlp`, routes audio into your selected output device (VB-CABLE recommended), optionally mirrors audio to speakers, and toggles TF2 voice transmit via RCON (`+voicerecord` / `-voicerecord`).
 
@@ -77,8 +79,8 @@ npm run dist:linux:appimage
 - Individual queue items can be removed from the UI.
 - Per-user queue cap is configurable in Settings (default: `1`).
 - `Clear logs upon startup` is disabled by default.
-- `?skip` and `?pause` chat commands are disabled by default and can be enabled in Settings.
-- Skip/Pause keyboard shortcuts are configurable in Settings with click-to-capture buttons (`Esc` cancels capture).
+- `?skip`, `?pause`, `?resume`, and `?stop` chat commands are disabled by default and can be enabled in Settings.
+- Skip/Pause-Resume/Stop keyboard shortcuts are configurable in Settings with click-to-capture buttons (`Esc` cancels capture).
 - Shortcuts are registered with Electron global shortcuts and work while the app is unfocused.
 - Optional bot chat responses can be enabled in Settings (`say` over RCON).
 - Bot playback volume is adjustable from the Settings modal.

@@ -11,6 +11,7 @@ import {
   Music2,
   Pause,
   PictureInPicture2,
+  Play,
   Plus,
   Power,
   Radio,
@@ -73,7 +74,7 @@ function normalizeMaxTracksPerUser(value: number | undefined): number {
 }
 
 type SettingsTab = "general" | "audio" | "automation" | "ui";
-type CaptureTarget = "skip" | "pause" | null;
+type CaptureTarget = "skip" | "pause" | "stop" | null;
 
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
 
@@ -240,6 +241,50 @@ export function App() {
     }
   }
 
+  async function pauseTrack(): Promise<void> {
+    micAudioRef.current?.pause();
+    mirrorAudioRef.current?.pause();
+  }
+
+  async function resumeTrack(): Promise<void> {
+    const micAudio = micAudioRef.current;
+    const mirrorAudio = mirrorAudioRef.current;
+    const activeSettings = settingsRef.current;
+    if (!micAudio || !mirrorAudio || !activeSettings || !micAudio.src) {
+      return;
+    }
+
+    const attemptId = playbackAttemptRef.current;
+    terminalNotifiedAttemptRef.current = -1;
+
+    try {
+      applyVolume(activeSettings);
+      mirrorAudio.muted = !activeSettings.mirrorToDefaultSpeaker;
+      await micAudio.play();
+      if (attemptId !== playbackAttemptRef.current) {
+        return;
+      }
+
+      if (activeSettings.mirrorToDefaultSpeaker && mirrorAudio.src) {
+        mirrorAudio.muted = false;
+        try {
+          await mirrorAudio.play();
+        } catch {
+          // Mirror is optional. Keep primary mic playback active.
+        }
+      }
+    } catch (error) {
+      if (attemptId !== playbackAttemptRef.current) {
+        return;
+      }
+      if (terminalNotifiedAttemptRef.current === attemptId) {
+        return;
+      }
+      terminalNotifiedAttemptRef.current = attemptId;
+      window.tfRadio.notifyPlaybackError(String(error));
+    }
+  }
+
   function applyVolume(nextSettings: Settings | null): void {
     const volume = normalizeVolume(nextSettings?.botVolume);
 
@@ -370,6 +415,22 @@ export function App() {
           }
         })
       );
+
+      unsubscribers.push(
+        window.tfRadio.onPlaybackPause(() => {
+          if (mounted) {
+            void pauseTrack();
+          }
+        })
+      );
+
+      unsubscribers.push(
+        window.tfRadio.onPlaybackResume(() => {
+          if (mounted) {
+            void resumeTrack();
+          }
+        })
+      );
     })();
 
     return () => {
@@ -420,7 +481,11 @@ export function App() {
           return { ...current, skipShortcut: accelerator };
         }
 
-        return { ...current, pauseShortcut: accelerator };
+        if (captureTarget === "pause") {
+          return { ...current, pauseShortcut: accelerator };
+        }
+
+        return { ...current, stopShortcut: accelerator };
       });
       setCaptureTarget(null);
     };
@@ -444,6 +509,11 @@ export function App() {
   }, [state]);
 
   const hintText = launchHint || state.setupIssue?.launchOptionsHint || null;
+  const upcomingQueueCount = state.current ? Math.max(0, state.queue.length - 1) : state.queue.length;
+  const isPlaybackPaused = state.playback === "paused";
+  const canTogglePlayback =
+    state.serviceRunning && Boolean(state.current) && state.playback !== "buffering";
+  const canStopPlayback = state.serviceRunning && (Boolean(state.current) || state.queue.length > 0);
 
   function copyLaunchHint(): void {
     if (!hintText) {
@@ -475,8 +545,10 @@ export function App() {
       overlayEnabled: Boolean(draft.overlayEnabled),
       chatSkipCommandEnabled: Boolean(draft.chatSkipCommandEnabled),
       chatPauseCommandEnabled: Boolean(draft.chatPauseCommandEnabled),
+      chatStopCommandEnabled: Boolean(draft.chatStopCommandEnabled),
       skipShortcut: draft.skipShortcut?.trim() ? draft.skipShortcut.trim() : null,
       pauseShortcut: draft.pauseShortcut?.trim() ? draft.pauseShortcut.trim() : null,
+      stopShortcut: draft.stopShortcut?.trim() ? draft.stopShortcut.trim() : null,
       chatResponsesEnabled: draft.chatResponsesEnabled
     });
 
@@ -595,7 +667,13 @@ export function App() {
                 <p class="player-meta">
                   Type <code>?play &lt;query&gt;</code>
                   {settings?.chatSkipCommandEnabled ? <>, <code>?skip</code></> : null}
-                  {settings?.chatPauseCommandEnabled ? <>, <code>?pause</code></> : null} in TF2 chat
+                  {settings?.chatPauseCommandEnabled ? (
+                    <>
+                      , <code>?pause</code>, <code>?resume</code>
+                    </>
+                  ) : null}{" "}
+                  {settings?.chatStopCommandEnabled ? <>, <code>?stop</code></> : null}{" "}
+                  in TF2 chat
                 </p>
               </>
             )}
@@ -605,12 +683,12 @@ export function App() {
             <button
               class="btn ghost"
               type="button"
-              disabled={!state.serviceRunning}
-              onClick={() => void window.tfRadio.clearQueue()}
+              disabled={!canTogglePlayback}
+              onClick={() => void window.tfRadio.togglePausePlayback()}
             >
               <span class="btn-content">
-                <Pause size={14} class="icon" />
-                Pause
+                {isPlaybackPaused ? <Play size={14} class="icon" /> : <Pause size={14} class="icon" />}
+                {isPlaybackPaused ? "Resume" : "Pause"}
               </span>
             </button>
             <button
@@ -627,7 +705,18 @@ export function App() {
             <button
               class="btn ghost"
               type="button"
-              disabled={!state.serviceRunning || state.queue.length === 0}
+              disabled={!canStopPlayback}
+              onClick={() => void window.tfRadio.stopQueue()}
+            >
+              <span class="btn-content">
+                <Square size={14} class="icon" />
+                Stop
+              </span>
+            </button>
+            <button
+              class="btn ghost"
+              type="button"
+              disabled={!state.serviceRunning || upcomingQueueCount === 0}
               onClick={() => void window.tfRadio.clearQueue()}
             >
               <span class="btn-content">
@@ -648,7 +737,7 @@ export function App() {
             </div>
             <div class="stat-item">
               <Music2 size={12} class="icon" />
-              <span>{state.queue.length} queued</span>
+              <span>{upcomingQueueCount} queued</span>
             </div>
             <div class="stat-item">
               <Users size={12} class="icon" />
@@ -708,7 +797,10 @@ export function App() {
                       <span class="queue-num">#{index + 1}</span>
                       <div class="queue-details">
                         <span class="queue-title">{item.title}</span>
-                        <span class="queue-requester">{item.requestedBy}</span>
+                        <span class="queue-requester">
+                          {item.requestedBy}
+                          {state.current?.id === item.id ? " • now playing" : ""}
+                        </span>
                       </div>
                       <button
                         class="queue-remove-btn"
@@ -1075,7 +1167,25 @@ export function App() {
                     }
                   />
                   <Square size={14} class="icon" />
-                  Allow <code>?pause</code> in chat
+                  Allow <code>?pause</code> / <code>?resume</code> in chat
+                </label>
+                <label class="toggle">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(draft?.chatStopCommandEnabled)}
+                    onChange={(event) =>
+                      setDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              chatStopCommandEnabled: (event.currentTarget as HTMLInputElement).checked
+                            }
+                          : current
+                      )
+                    }
+                  />
+                  <Square size={14} class="icon" />
+                  Allow <code>?stop</code> in chat
                 </label>
                 <div class="field">
                   <label class="label-with-icon">
@@ -1109,7 +1219,7 @@ export function App() {
                 <div class="field">
                   <label class="label-with-icon">
                     <Command size={14} class="icon" />
-                    Pause Shortcut
+                    Pause/Resume Shortcut
                   </label>
                   <div class="field-row">
                     <button
@@ -1121,14 +1231,43 @@ export function App() {
                     >
                       {captureTarget === "pause"
                         ? "Press shortcut... (Esc to cancel)"
-                        : draft?.pauseShortcut ?? "Set shortcut"}
+                        : draft?.pauseShortcut ?? "Set pause/resume shortcut"}
                     </button>
                     <button
                       class="btn ghost compact"
                       type="button"
-                      title="Clear pause shortcut"
+                      title="Clear pause/resume shortcut"
                       onClick={() =>
                         setDraft((current) => (current ? { ...current, pauseShortcut: null } : current))
+                      }
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="label-with-icon">
+                    <Command size={14} class="icon" />
+                    Stop Shortcut
+                  </label>
+                  <div class="field-row">
+                    <button
+                      type="button"
+                      class={`btn ghost shortcut-capture ${captureTarget === "stop" ? "capturing" : ""}`}
+                      onClick={() =>
+                        setCaptureTarget((current) => (current === "stop" ? null : "stop"))
+                      }
+                    >
+                      {captureTarget === "stop"
+                        ? "Press shortcut... (Esc to cancel)"
+                        : draft?.stopShortcut ?? "Set stop shortcut"}
+                    </button>
+                    <button
+                      class="btn ghost compact"
+                      type="button"
+                      title="Clear stop shortcut"
+                      onClick={() =>
+                        setDraft((current) => (current ? { ...current, stopShortcut: null } : current))
                       }
                     >
                       <Trash2 size={14} />

@@ -25,6 +25,9 @@ const api = {
   startService: (): Promise<{ ok: boolean; reason?: string }> => ipcRenderer.invoke(IPC_CHANNELS.serviceStart),
   stopService: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.serviceStop),
   skipQueue: (): Promise<{ ok: boolean; reason?: string }> => ipcRenderer.invoke(IPC_CHANNELS.queueSkip),
+  togglePausePlayback: (): Promise<{ ok: boolean; reason?: string; action?: "paused" | "resumed" }> =>
+    ipcRenderer.invoke(IPC_CHANNELS.queuePauseToggle),
+  stopQueue: (): Promise<{ ok: boolean; reason?: string }> => ipcRenderer.invoke(IPC_CHANNELS.queueStop),
   clearQueue: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.queueClear),
   addToQueue: (query: string): Promise<{ ok: boolean; reason?: string }> =>
     ipcRenderer.invoke(IPC_CHANNELS.queueAdd, query),
@@ -47,6 +50,16 @@ const api = {
     const listener = () => handler();
     ipcRenderer.on(IPC_CHANNELS.playbackStop, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.playbackStop, listener);
+  },
+  onPlaybackPause: (handler: () => void): (() => void) => {
+    const listener = () => handler();
+    ipcRenderer.on(IPC_CHANNELS.playbackPause, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.playbackPause, listener);
+  },
+  onPlaybackResume: (handler: () => void): (() => void) => {
+    const listener = () => handler();
+    ipcRenderer.on(IPC_CHANNELS.playbackResume, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.playbackResume, listener);
   },
   onSetupRconRequired: (handler: (payload: SetupRconRequiredPayload) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, payload: SetupRconRequiredPayload) => handler(payload);

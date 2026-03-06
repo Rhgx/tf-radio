@@ -1,6 +1,6 @@
 export type CommandScope = "self" | "anyone";
 
-export type PlaybackState = "idle" | "buffering" | "playing" | "error";
+export type PlaybackState = "idle" | "buffering" | "playing" | "paused" | "error";
 
 export interface Settings {
   tf2Path: string | null;
@@ -20,8 +20,10 @@ export interface Settings {
   overlayEnabled: boolean;
   chatSkipCommandEnabled: boolean;
   chatPauseCommandEnabled: boolean;
+  chatStopCommandEnabled: boolean;
   skipShortcut: string | null;
   pauseShortcut: string | null;
+  stopShortcut: string | null;
   chatResponsesEnabled: boolean;
 }
 
@@ -75,7 +77,7 @@ export type ParsedCommand =
     }
   | {
       speaker: string;
-      kind: "skip" | "pause";
+      kind: "skip" | "pause" | "resume" | "stop";
     };
 
 export interface LogLineEvent {

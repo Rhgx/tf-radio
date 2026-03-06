@@ -1,5 +1,5 @@
 export type CommandScope = "self" | "anyone";
-export type PlaybackState = "idle" | "buffering" | "playing" | "error";
+export type PlaybackState = "idle" | "buffering" | "playing" | "paused" | "error";
 
 export interface Settings {
   tf2Path: string | null;
@@ -19,8 +19,10 @@ export interface Settings {
   overlayEnabled: boolean;
   chatSkipCommandEnabled: boolean;
   chatPauseCommandEnabled: boolean;
+  chatStopCommandEnabled: boolean;
   skipShortcut: string | null;
   pauseShortcut: string | null;
+  stopShortcut: string | null;
   chatResponsesEnabled: boolean;
 }
 
@@ -86,6 +88,8 @@ export interface TfRadioApi {
   startService: () => Promise<{ ok: boolean; reason?: string }>;
   stopService: () => Promise<{ ok: boolean }>;
   skipQueue: () => Promise<{ ok: boolean; reason?: string }>;
+  togglePausePlayback: () => Promise<{ ok: boolean; reason?: string; action?: "paused" | "resumed" }>;
+  stopQueue: () => Promise<{ ok: boolean; reason?: string }>;
   clearQueue: () => Promise<{ ok: boolean }>;
   addToQueue: (query: string) => Promise<{ ok: boolean; reason?: string }>;
   removeFromQueue: (id: string) => Promise<{ ok: boolean; reason?: string }>;
@@ -93,6 +97,8 @@ export interface TfRadioApi {
   onStateUpdate: (handler: (state: AppState) => void) => () => void;
   onPlaybackStart: (handler: (item: QueueItem) => void) => () => void;
   onPlaybackStop: (handler: () => void) => () => void;
+  onPlaybackPause: (handler: () => void) => () => void;
+  onPlaybackResume: (handler: () => void) => () => void;
   onSetupRconRequired: (handler: (payload: SetupRconRequiredPayload) => void) => () => void;
   onLogAppend: (handler: (line: string) => void) => () => void;
   notifyPlaybackReady: () => void;

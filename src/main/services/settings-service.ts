@@ -26,8 +26,10 @@ const settingsPatchSchema = z
     overlayEnabled: z.boolean(),
     chatSkipCommandEnabled: z.boolean(),
     chatPauseCommandEnabled: z.boolean(),
+    chatStopCommandEnabled: z.boolean(),
     skipShortcut: z.string().min(1).nullable(),
     pauseShortcut: z.string().min(1).nullable(),
+    stopShortcut: z.string().min(1).nullable(),
     chatResponsesEnabled: z.boolean()
   })
   .strict()
@@ -56,8 +58,10 @@ function defaults(): Settings {
     overlayEnabled: false,
     chatSkipCommandEnabled: false,
     chatPauseCommandEnabled: false,
+    chatStopCommandEnabled: false,
     skipShortcut: null,
     pauseShortcut: null,
+    stopShortcut: null,
     chatResponsesEnabled: false
   };
 }
@@ -121,6 +125,11 @@ export class SettingsService {
       this.store.set("settings", existing);
     }
 
+    if (typeof existing.chatStopCommandEnabled !== "boolean") {
+      existing.chatStopCommandEnabled = false;
+      this.store.set("settings", existing);
+    }
+
     if (typeof existing.skipShortcut !== "string" && existing.skipShortcut !== null) {
       existing.skipShortcut = null;
       this.store.set("settings", existing);
@@ -134,6 +143,14 @@ export class SettingsService {
       this.store.set("settings", existing);
     } else if (typeof existing.pauseShortcut === "string" && existing.pauseShortcut.trim().length === 0) {
       existing.pauseShortcut = null;
+      this.store.set("settings", existing);
+    }
+
+    if (typeof existing.stopShortcut !== "string" && existing.stopShortcut !== null) {
+      existing.stopShortcut = null;
+      this.store.set("settings", existing);
+    } else if (typeof existing.stopShortcut === "string" && existing.stopShortcut.trim().length === 0) {
+      existing.stopShortcut = null;
       this.store.set("settings", existing);
     }
   }

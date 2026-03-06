@@ -45,6 +45,7 @@ let processingChain = Promise.resolve();
 let recentLogs: string[] = [];
 let rconFailureLogged = false;
 let queueAdvanceInFlight = false;
+let pausedPlaybackOffsetMs = 0;
 let isQuitting = false;
 let ownsInstanceFileLock = false;
 let audioOutputsCache:
@@ -278,18 +279,108 @@ async function executeSkipAction(source: "chat" | "shortcut" | "ui"): Promise<vo
   await advanceQueue(source === "shortcut" ? "shortcut-skip" : "skipped");
 }
 
-async function executePauseAction(source: "chat" | "shortcut" | "ui"): Promise<void> {
+async function executeStopAction(
+  source: "chat" | "shortcut" | "ui"
+): Promise<{ ok: boolean; reason?: string }> {
   if (!state.current && queue.length === 0) {
+    const reason = "Queue is already empty.";
     if (source === "shortcut") {
-      pushLog("Pause shortcut ignored: queue is already empty.");
+      pushLog(`Stop shortcut ignored: ${reason.toLowerCase()}`);
     }
-    return;
+    return { ok: false, reason };
   }
 
   await clearQueueAndStopPlayback();
   if (source === "shortcut") {
-    pushLog("Playback paused via shortcut.");
+    pushLog("Playback stopped via stop shortcut.");
   }
+
+  return { ok: true };
+}
+
+async function executePauseAction(
+  source: "chat" | "shortcut" | "ui"
+): Promise<{ ok: boolean; reason?: string }> {
+  if (!state.current) {
+    const reason = "Nothing is currently playing.";
+    if (source === "shortcut") {
+      pushLog(`Pause/resume shortcut ignored: ${reason.toLowerCase()}`);
+    }
+    return { ok: false, reason };
+  }
+
+  if (state.playback === "paused") {
+    const reason = "Playback is already paused.";
+    if (source === "shortcut") {
+      pushLog(`Pause/resume shortcut ignored: ${reason.toLowerCase()}`);
+    }
+    return { ok: false, reason };
+  }
+
+  if (state.playback !== "playing") {
+    const reason = "Playback is not ready to pause yet.";
+    if (source === "shortcut") {
+      pushLog(`Pause/resume shortcut ignored: ${reason.toLowerCase()}`);
+    }
+    return { ok: false, reason };
+  }
+
+  pausedPlaybackOffsetMs =
+    state.playbackStartedAt !== null ? Math.max(0, Date.now() - state.playbackStartedAt) : 0;
+  sendToMainWindow(IPC_CHANNELS.playbackPause);
+  await stopPttKeepAlive();
+  updateState({ playback: "paused", playbackStartedAt: null, lastError: null });
+
+  if (source === "shortcut") {
+    pushLog("Playback paused via pause/resume shortcut.");
+  }
+
+  return { ok: true };
+}
+
+async function executeResumeAction(
+  source: "chat" | "shortcut" | "ui"
+): Promise<{ ok: boolean; reason?: string }> {
+  if (!state.current) {
+    const reason = "Nothing is currently paused.";
+    if (source === "shortcut") {
+      pushLog(`Pause/resume shortcut ignored: ${reason.toLowerCase()}`);
+    }
+    return { ok: false, reason };
+  }
+
+  if (state.playback !== "paused") {
+    const reason = "Playback is not paused.";
+    if (source === "shortcut") {
+      pushLog(`Pause/resume shortcut ignored: ${reason.toLowerCase()}`);
+    }
+    return { ok: false, reason };
+  }
+
+  const playbackStartedAt =
+    pausedPlaybackOffsetMs > 0 ? Date.now() - pausedPlaybackOffsetMs : Date.now();
+  pausedPlaybackOffsetMs = 0;
+  updateState({ playback: "playing", playbackStartedAt, lastError: null });
+  sendToMainWindow(IPC_CHANNELS.playbackResume);
+  await startPttKeepAlive();
+
+  if (source === "shortcut") {
+    pushLog("Playback resumed via pause/resume shortcut.");
+  }
+
+  return { ok: true };
+}
+
+async function executePauseToggleAction(
+  source: "shortcut" | "ui"
+): Promise<{ ok: boolean; reason?: string; action?: "paused" | "resumed" }> {
+  if (state.playback === "paused") {
+    const result = await executeResumeAction(source);
+    return { ...result, action: result.ok ? "resumed" : undefined };
+  }
+
+  const result = await executePauseAction(source);
+  return { ...result, action: result.ok ? "paused" : undefined };
 }
 
 function registerGlobalShortcuts(): void {
@@ -314,9 +405,16 @@ function registerGlobalShortcuts(): void {
     },
     {
       accelerator: normalizeShortcutAccelerator(settings.pauseShortcut),
-      label: "pause",
+      label: "pause/resume",
       callback: () => {
-        void executePauseAction("shortcut");
+        void executePauseToggleAction("shortcut");
+      }
+    },
+    {
+      accelerator: normalizeShortcutAccelerator(settings.stopShortcut),
+      label: "stop",
+      callback: () => {
+        void executeStopAction("shortcut");
       }
     }
   ];
@@ -648,6 +746,7 @@ async function advanceQueue(reason: string): Promise<void> {
       queue.shift();
     }
 
+    pausedPlaybackOffsetMs = 0;
     await stopPttKeepAlive();
 
     updateState({ current: null, playback: "idle", playbackStartedAt: null, queue: [...queue] });
@@ -663,9 +762,21 @@ async function advanceQueue(reason: string): Promise<void> {
 
 async function clearQueueAndStopPlayback(): Promise<void> {
   queue = [];
+  pausedPlaybackOffsetMs = 0;
   sendToMainWindow(IPC_CHANNELS.playbackStop);
   await stopPttKeepAlive();
   updateState({ current: null, playback: "idle", playbackStartedAt: null, queue: [] });
+}
+
+function clearUpcomingQueue(): number {
+  const removableCount = state.current ? Math.max(0, queue.length - 1) : queue.length;
+  if (removableCount === 0) {
+    return 0;
+  }
+
+  queue = state.current ? [state.current] : [];
+  updateState({ queue: [...queue] });
+  return removableCount;
 }
 
 async function processPlayCommand(speaker: string, query: string): Promise<void> {
@@ -718,9 +829,25 @@ async function processParsedCommand(command: ParsedCommand): Promise<void> {
     return;
   }
 
-  pushLog(`Command from ${command.speaker}: ?pause`);
-  await executePauseAction("chat");
-  await sendChatMessage("Paused playback and cleared the queue.");
+  if (command.kind === "pause") {
+    pushLog(`Command from ${command.speaker}: ?pause`);
+    const result = await executePauseAction("chat");
+    await sendChatMessage(result.ok ? "Paused playback." : result.reason ?? "Could not pause playback.");
+    return;
+  }
+
+  if (command.kind === "resume") {
+    pushLog(`Command from ${command.speaker}: ?resume`);
+    const result = await executeResumeAction("chat");
+    await sendChatMessage(result.ok ? "Resumed playback." : result.reason ?? "Could not resume playback.");
+    return;
+  }
+
+  pushLog(`Command from ${command.speaker}: ?stop`);
+  const result = await executeStopAction("chat");
+  await sendChatMessage(
+    result.ok ? "Stopped playback and cleared the queue." : result.reason ?? "Could not stop playback."
+  );
 }
 
 function queueParsedCommand(command: ParsedCommand): void {
@@ -836,7 +963,8 @@ async function startService(): Promise<{ ok: boolean; reason?: string }> {
   const chatCommands = [
     "?play",
     ...(settings.chatSkipCommandEnabled ? ["?skip"] : []),
-    ...(settings.chatPauseCommandEnabled ? ["?pause"] : [])
+    ...(settings.chatPauseCommandEnabled ? ["?pause", "?resume"] : []),
+    ...(settings.chatStopCommandEnabled ? ["?stop"] : [])
   ];
   pushLog(`Service started. Listening for ${chatCommands.join(", ")} commands.`);
   return { ok: true };
@@ -1128,8 +1256,19 @@ function registerIpcHandlers(): void {
     return { ok: true };
   });
 
+  ipcMain.handle(IPC_CHANNELS.queuePauseToggle, async () => {
+    return executePauseToggleAction("ui");
+  });
+
+  ipcMain.handle(IPC_CHANNELS.queueStop, async () => {
+    return executeStopAction("ui");
+  });
+
   ipcMain.handle(IPC_CHANNELS.queueClear, async () => {
-    await executePauseAction("ui");
+    const removedCount = clearUpcomingQueue();
+    if (removedCount > 0) {
+      pushLog(`Cleared ${removedCount} queued ${removedCount === 1 ? "track" : "tracks"}.`);
+    }
     return { ok: true };
   });
 
@@ -1165,6 +1304,13 @@ function registerIpcHandlers(): void {
     }
 
     const removed = queue[index];
+    if (state.current?.id === id && index === 0) {
+      pushLog(`Removed current track from queue: ${removed?.title ?? id}`);
+      sendToMainWindow(IPC_CHANNELS.playbackStop);
+      await advanceQueue("removed");
+      return { ok: true };
+    }
+
     queue.splice(index, 1);
     updateState({ queue: [...queue] });
     pushLog(`Removed from queue: ${removed?.title ?? id}`);
@@ -1173,6 +1319,14 @@ function registerIpcHandlers(): void {
 
   ipcMain.on(IPC_CHANNELS.playbackReady, () => {
     if (!state.current) {
+      return;
+    }
+
+    if (state.playback === "paused") {
+      return;
+    }
+
+    if (state.playback === "playing" && state.playbackStartedAt !== null) {
       return;
     }
 
