@@ -2,9 +2,9 @@
 
 Electron app for Windows and Linux that listens to TF2 `console.log` for:
 
-- `?play <youtube search query>`
+- `?play <youtube search query or link>`
 - `?skip`
-- `?stop`
+- `?pause`
 
 It resolves tracks with `yt-dlp`, routes audio into your selected output device (VB-CABLE recommended), optionally mirrors audio to speakers, and toggles TF2 voice transmit via RCON (`+voicerecord` / `-voicerecord`).
 
@@ -17,7 +17,7 @@ It resolves tracks with `yt-dlp`, routes audio into your selected output device 
 - TF2 launch options must include:
 
 ```text
--usercon +net_start +rcon_password <generated-in-app> +sv_rcon_whitelist_address 127.0.0.1 +con_logfile console.log
+-usercon +ip 0.0.0.0 +hostport 21770 +net_start +rcon_password <generated-in-app> +sv_rcon_whitelist_address 127.0.0.1 +con_logfile console.log
 ```
 
 The app validates this and shows the exact required string in the UI.
@@ -71,12 +71,14 @@ npm run dist:linux:appimage
 ## Notes
 
 - Renderer UI is built with **Preact + Vite** (no React runtime).
+- Service on/off is controlled by a power toggle in the top bar.
 - Default command scope is `anyone` (any player messages can trigger playback).
-- Queue mode is FIFO.
+- Queue mode is FIFO. Tracks can be added from the UI (search or YouTube link) or via `?play` in TF2 chat.
+- Individual queue items can be removed from the UI.
 - Per-user queue cap is configurable in Settings (default: `1`).
 - `Clear logs upon startup` is disabled by default.
-- `?skip` and `?stop` chat commands are disabled by default and can be enabled in Settings.
-- Skip/Stop keyboard shortcuts are configurable in Settings with click-to-capture buttons (`Esc` cancels capture).
+- `?skip` and `?pause` chat commands are disabled by default and can be enabled in Settings.
+- Skip/Pause keyboard shortcuts are configurable in Settings with click-to-capture buttons (`Esc` cancels capture).
 - Shortcuts are registered with Electron global shortcuts and work while the app is unfocused.
 - Optional bot chat responses can be enabled in Settings (`say` over RCON).
 - Bot playback volume is adjustable from the Settings modal.

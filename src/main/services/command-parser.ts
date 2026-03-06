@@ -45,11 +45,11 @@ export class CommandParser {
       return this.withDedupe({ speaker, kind: "skip" }, line, offset);
     }
 
-    if (normalized === "?stop") {
-      if (!settings.chatStopCommandEnabled) {
+    if (normalized === "?pause") {
+      if (!settings.chatPauseCommandEnabled) {
         return null;
       }
-      return this.withDedupe({ speaker, kind: "stop" }, line, offset);
+      return this.withDedupe({ speaker, kind: "pause" }, line, offset);
     }
 
     if (!normalized.startsWith(`${settings.commandPrefix} `)) {

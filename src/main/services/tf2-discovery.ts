@@ -268,7 +268,27 @@ export async function findCurrentLaunchOptions(
 }
 
 export function buildRequiredLaunchOptions(settings: Settings): string {
-  return `-usercon +net_start +rcon_password ${settings.rconPassword} +sv_rcon_whitelist_address 127.0.0.1 +con_logfile console.log`;
+  return `-usercon +ip 0.0.0.0 +hostport ${settings.rconPort} +net_start +rcon_password ${settings.rconPassword} +sv_rcon_whitelist_address 127.0.0.1 +con_logfile console.log`;
+}
+
+export function resolveRconPort(settings: Settings, launchOptions: string | null): number {
+  const portPatterns = [/\+hostport\s+(\d+)/i, /-port\s+(\d+)/i, /\+clientport\s+(\d+)/i];
+
+  for (const pattern of portPatterns) {
+    const match = launchOptions?.match(pattern);
+    const parsed = Number(match?.[1]);
+    if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) {
+      return parsed;
+    }
+  }
+
+  // Older app builds defaulted to 21770. If no port is specified in TF2 launch options,
+  // use Source's default RCON port instead of a stale persisted value.
+  if (settings.rconPort === 21770) {
+    return 27015;
+  }
+
+  return settings.rconPort;
 }
 
 export function validateLaunchOptions(settings: Settings, launchOptions: string | null): string[] {
@@ -277,6 +297,8 @@ export function validateLaunchOptions(settings: Settings, launchOptions: string 
 
   const requiredTokens = [
     "-usercon",
+    "+ip 0.0.0.0",
+    `+hostport ${settings.rconPort}`,
     "+net_start",
     "+sv_rcon_whitelist_address 127.0.0.1",
     "+con_logfile console.log"

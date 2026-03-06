@@ -19,9 +19,9 @@ export interface Settings {
   minimizeToTray: boolean;
   overlayEnabled: boolean;
   chatSkipCommandEnabled: boolean;
-  chatStopCommandEnabled: boolean;
+  chatPauseCommandEnabled: boolean;
   skipShortcut: string | null;
-  stopShortcut: string | null;
+  pauseShortcut: string | null;
   chatResponsesEnabled: boolean;
 }
 
@@ -75,7 +75,7 @@ export type ParsedCommand =
     }
   | {
       speaker: string;
-      kind: "skip" | "stop";
+      kind: "skip" | "pause";
     };
 
 export interface LogLineEvent {

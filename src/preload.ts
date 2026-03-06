@@ -26,6 +26,10 @@ const api = {
   stopService: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.serviceStop),
   skipQueue: (): Promise<{ ok: boolean; reason?: string }> => ipcRenderer.invoke(IPC_CHANNELS.queueSkip),
   clearQueue: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.queueClear),
+  addToQueue: (query: string): Promise<{ ok: boolean; reason?: string }> =>
+    ipcRenderer.invoke(IPC_CHANNELS.queueAdd, query),
+  removeFromQueue: (id: string): Promise<{ ok: boolean; reason?: string }> =>
+    ipcRenderer.invoke(IPC_CHANNELS.queueRemove, id),
   copyText: (text: string): void => {
     clipboard.writeText(text);
   },

@@ -18,9 +18,9 @@ export interface Settings {
   minimizeToTray: boolean;
   overlayEnabled: boolean;
   chatSkipCommandEnabled: boolean;
-  chatStopCommandEnabled: boolean;
+  chatPauseCommandEnabled: boolean;
   skipShortcut: string | null;
-  stopShortcut: string | null;
+  pauseShortcut: string | null;
   chatResponsesEnabled: boolean;
 }
 
@@ -87,6 +87,8 @@ export interface TfRadioApi {
   stopService: () => Promise<{ ok: boolean }>;
   skipQueue: () => Promise<{ ok: boolean; reason?: string }>;
   clearQueue: () => Promise<{ ok: boolean }>;
+  addToQueue: (query: string) => Promise<{ ok: boolean; reason?: string }>;
+  removeFromQueue: (id: string) => Promise<{ ok: boolean; reason?: string }>;
   copyText: (text: string) => void;
   onStateUpdate: (handler: (state: AppState) => void) => () => void;
   onPlaybackStart: (handler: (item: QueueItem) => void) => () => void;

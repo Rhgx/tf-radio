@@ -6,6 +6,8 @@ export const IPC_CHANNELS = {
   serviceStop: "service:stop",
   queueSkip: "queue:skip",
   queueClear: "queue:clear",
+  queueAdd: "queue:add",
+  queueRemove: "queue:remove",
   stateUpdate: "state:update",
   playbackStart: "playback:start",
   playbackStop: "playback:stop",

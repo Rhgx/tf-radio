@@ -20,6 +20,7 @@ import { SettingsService } from "./services/settings-service.js";
 import {
   buildRequiredLaunchOptions,
   discoverTf2Context,
+  resolveRconPort,
   validateRconLaunchOptions
 } from "./services/tf2-discovery.js";
 import { resolveYoutubeTrack } from "./services/youtube.js";
@@ -277,17 +278,17 @@ async function executeSkipAction(source: "chat" | "shortcut" | "ui"): Promise<vo
   await advanceQueue(source === "shortcut" ? "shortcut-skip" : "skipped");
 }
 
-async function executeStopAction(source: "chat" | "shortcut" | "ui"): Promise<void> {
+async function executePauseAction(source: "chat" | "shortcut" | "ui"): Promise<void> {
   if (!state.current && queue.length === 0) {
     if (source === "shortcut") {
-      pushLog("Stop shortcut ignored: queue is already empty.");
+      pushLog("Pause shortcut ignored: queue is already empty.");
     }
     return;
   }
 
   await clearQueueAndStopPlayback();
   if (source === "shortcut") {
-    pushLog("Playback stopped via shortcut.");
+    pushLog("Playback paused via shortcut.");
   }
 }
 
@@ -312,10 +313,10 @@ function registerGlobalShortcuts(): void {
       }
     },
     {
-      accelerator: normalizeShortcutAccelerator(settings.stopShortcut),
-      label: "stop",
+      accelerator: normalizeShortcutAccelerator(settings.pauseShortcut),
+      label: "pause",
       callback: () => {
-        void executeStopAction("shortcut");
+        void executePauseAction("shortcut");
       }
     }
   ];
@@ -717,9 +718,9 @@ async function processParsedCommand(command: ParsedCommand): Promise<void> {
     return;
   }
 
-  pushLog(`Command from ${command.speaker}: ?stop`);
-  await executeStopAction("chat");
-  await sendChatMessage("Stopped playback and cleared the queue.");
+  pushLog(`Command from ${command.speaker}: ?pause`);
+  await executePauseAction("chat");
+  await sendChatMessage("Paused playback and cleared the queue.");
 }
 
 function queueParsedCommand(command: ParsedCommand): void {
@@ -785,9 +786,10 @@ async function startService(): Promise<{ ok: boolean; reason?: string }> {
   }
 
   try {
+    const connectPort = resolveRconPort(settings, launchValidation.currentLaunchOptions);
     await rconService.connectWithRetry({
       host: settings.rconHost,
-      port: settings.rconPort,
+      port: connectPort,
       password: settings.rconPassword
     });
     // Force voice transmit off when service starts; we only enable it during active playback.
@@ -834,7 +836,7 @@ async function startService(): Promise<{ ok: boolean; reason?: string }> {
   const chatCommands = [
     "?play",
     ...(settings.chatSkipCommandEnabled ? ["?skip"] : []),
-    ...(settings.chatStopCommandEnabled ? ["?stop"] : [])
+    ...(settings.chatPauseCommandEnabled ? ["?pause"] : [])
   ];
   pushLog(`Service started. Listening for ${chatCommands.join(", ")} commands.`);
   return { ok: true };
@@ -1127,7 +1129,45 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle(IPC_CHANNELS.queueClear, async () => {
-    await executeStopAction("ui");
+    await executePauseAction("ui");
+    return { ok: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.queueAdd, async (_event, query: string) => {
+    if (!state.serviceRunning) {
+      return { ok: false, reason: "Service is not running." };
+    }
+
+    const trimmed = (query ?? "").trim();
+    if (!trimmed) {
+      return { ok: false, reason: "Query is empty." };
+    }
+
+    const settings = settingsService.getSettings();
+    const speaker = settings.playerName || "UI";
+
+    try {
+      const track = await resolveYoutubeTrack(trimmed, speaker);
+      enqueuePlayback(track);
+      pushLog(`Queued from UI: ${track.title} (${track.channel})`);
+      return { ok: true };
+    } catch (error) {
+      const message = `Failed to resolve "${trimmed}": ${String(error)}`;
+      pushLog(message);
+      return { ok: false, reason: message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.queueRemove, async (_event, id: string) => {
+    const index = queue.findIndex((item) => item.id === id);
+    if (index === -1) {
+      return { ok: false, reason: "Item not found in queue." };
+    }
+
+    const removed = queue[index];
+    queue.splice(index, 1);
+    updateState({ queue: [...queue] });
+    pushLog(`Removed from queue: ${removed?.title ?? id}`);
     return { ok: true };
   });
 

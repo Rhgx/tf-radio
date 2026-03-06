@@ -9,8 +9,10 @@ import {
   Minimize2,
   MonitorSpeaker,
   Music2,
+  Pause,
   PictureInPicture2,
-  Play,
+  Plus,
+  Power,
   Radio,
   RefreshCw,
   Settings as SettingsIcon,
@@ -71,7 +73,7 @@ function normalizeMaxTracksPerUser(value: number | undefined): number {
 }
 
 type SettingsTab = "general" | "audio" | "automation" | "ui";
-type CaptureTarget = "skip" | "stop" | null;
+type CaptureTarget = "skip" | "pause" | null;
 
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
 
@@ -169,6 +171,8 @@ export function App() {
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("general");
   const [captureTarget, setCaptureTarget] = useState<CaptureTarget>(null);
   const [copiedLaunchHint, setCopiedLaunchHint] = useState(false);
+  const [queueInput, setQueueInput] = useState("");
+  const [addingToQueue, setAddingToQueue] = useState(false);
 
   function suppressMediaEventsTemporarily(durationMs = 150): void {
     mediaSuppressDepthRef.current += 1;
@@ -416,7 +420,7 @@ export function App() {
           return { ...current, skipShortcut: accelerator };
         }
 
-        return { ...current, stopShortcut: accelerator };
+        return { ...current, pauseShortcut: accelerator };
       });
       setCaptureTarget(null);
     };
@@ -470,9 +474,9 @@ export function App() {
       minimizeToTray: Boolean(draft.minimizeToTray),
       overlayEnabled: Boolean(draft.overlayEnabled),
       chatSkipCommandEnabled: Boolean(draft.chatSkipCommandEnabled),
-      chatStopCommandEnabled: Boolean(draft.chatStopCommandEnabled),
+      chatPauseCommandEnabled: Boolean(draft.chatPauseCommandEnabled),
       skipShortcut: draft.skipShortcut?.trim() ? draft.skipShortcut.trim() : null,
-      stopShortcut: draft.stopShortcut?.trim() ? draft.stopShortcut.trim() : null,
+      pauseShortcut: draft.pauseShortcut?.trim() ? draft.pauseShortcut.trim() : null,
       chatResponsesEnabled: draft.chatResponsesEnabled
     });
 
@@ -484,6 +488,21 @@ export function App() {
     setSettingsOpen(false);
   }
 
+  async function handleAddToQueue(): Promise<void> {
+    const trimmed = queueInput.trim();
+    if (!trimmed || addingToQueue) {
+      return;
+    }
+
+    setAddingToQueue(true);
+    try {
+      await window.tfRadio.addToQueue(trimmed);
+      setQueueInput("");
+    } finally {
+      setAddingToQueue(false);
+    }
+  }
+
   return (
     <div class="app-shell">
       <header class="top-bar">
@@ -492,9 +511,27 @@ export function App() {
           <span class="app-title">TF2 Radio</span>
         </div>
         <div class="top-bar-right">
-          <span class={`chip ${state.serviceRunning ? "ok" : "bad"}`}>
-            {state.serviceRunning ? "ONLINE" : "OFFLINE"}
-          </span>
+          <button
+            class={`power-toggle ${state.serviceRunning ? "on" : "off"}`}
+            type="button"
+            title={state.serviceRunning ? "Stop service" : "Start service"}
+            onClick={() => {
+              if (state.serviceRunning) {
+                void window.tfRadio.stopService();
+              } else {
+                void window.tfRadio.startService();
+              }
+            }}
+          >
+            <span class="power-toggle-track">
+              <span class="power-toggle-thumb">
+                <Power size={11} />
+              </span>
+            </span>
+            <span class="power-toggle-label">
+              {state.serviceRunning ? "ON" : "OFF"}
+            </span>
+          </button>
           <span class={`chip ${state.connectedToRcon ? "ok" : "bad"}`}>
             {state.connectedToRcon ? "RCON" : "NO RCON"}
           </span>
@@ -558,7 +595,7 @@ export function App() {
                 <p class="player-meta">
                   Type <code>?play &lt;query&gt;</code>
                   {settings?.chatSkipCommandEnabled ? <>, <code>?skip</code></> : null}
-                  {settings?.chatStopCommandEnabled ? <>, <code>?stop</code></> : null} in TF2 chat
+                  {settings?.chatPauseCommandEnabled ? <>, <code>?pause</code></> : null} in TF2 chat
                 </p>
               </>
             )}
@@ -566,28 +603,20 @@ export function App() {
 
           <div class="controls-row">
             <button
-              class="btn primary"
+              class="btn ghost"
               type="button"
-              onClick={() => void window.tfRadio.startService()}
+              disabled={!state.serviceRunning}
+              onClick={() => void window.tfRadio.clearQueue()}
             >
               <span class="btn-content">
-                <Play size={14} class="icon" />
-                Start
+                <Pause size={14} class="icon" />
+                Pause
               </span>
             </button>
             <button
               class="btn ghost"
               type="button"
-              onClick={() => void window.tfRadio.stopService()}
-            >
-              <span class="btn-content">
-                <Square size={14} class="icon" />
-                Stop
-              </span>
-            </button>
-            <button
-              class="btn ghost"
-              type="button"
+              disabled={!state.serviceRunning}
               onClick={() => void window.tfRadio.skipQueue()}
             >
               <span class="btn-content">
@@ -598,11 +627,12 @@ export function App() {
             <button
               class="btn ghost"
               type="button"
+              disabled={!state.serviceRunning || state.queue.length === 0}
               onClick={() => void window.tfRadio.clearQueue()}
             >
               <span class="btn-content">
                 <Trash2 size={14} class="icon" />
-                Clear
+                Clear Queue
               </span>
             </button>
           </div>
@@ -642,6 +672,32 @@ export function App() {
                 <span class="panel-count">{state.queue.length}</span>
               )}
             </div>
+            <div class="queue-add-row">
+              <input
+                class="queue-add-input"
+                type="text"
+                placeholder="Search or paste a YouTube link..."
+                value={queueInput}
+                disabled={!state.serviceRunning || addingToQueue}
+                onInput={(event) =>
+                  setQueueInput((event.currentTarget as HTMLInputElement).value)
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    void handleAddToQueue();
+                  }
+                }}
+              />
+              <button
+                class="btn primary compact"
+                type="button"
+                title="Add to queue"
+                disabled={!state.serviceRunning || addingToQueue || !queueInput.trim()}
+                onClick={() => void handleAddToQueue()}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
             <div class="panel-body">
               {state.queue.length === 0 ? (
                 <p class="panel-empty">Queue is empty</p>
@@ -654,6 +710,14 @@ export function App() {
                         <span class="queue-title">{item.title}</span>
                         <span class="queue-requester">{item.requestedBy}</span>
                       </div>
+                      <button
+                        class="queue-remove-btn"
+                        type="button"
+                        title="Remove from queue"
+                        onClick={() => void window.tfRadio.removeFromQueue(item.id)}
+                      >
+                        <X size={12} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -997,13 +1061,13 @@ export function App() {
                 <label class="toggle">
                   <input
                     type="checkbox"
-                    checked={Boolean(draft?.chatStopCommandEnabled)}
+                    checked={Boolean(draft?.chatPauseCommandEnabled)}
                     onChange={(event) =>
                       setDraft((current) =>
                         current
                           ? {
                               ...current,
-                              chatStopCommandEnabled: (event.currentTarget as HTMLInputElement)
+                              chatPauseCommandEnabled: (event.currentTarget as HTMLInputElement)
                                 .checked
                             }
                           : current
@@ -1011,7 +1075,7 @@ export function App() {
                     }
                   />
                   <Square size={14} class="icon" />
-                  Allow <code>?stop</code> in chat
+                  Allow <code>?pause</code> in chat
                 </label>
                 <div class="field">
                   <label class="label-with-icon">
@@ -1045,26 +1109,26 @@ export function App() {
                 <div class="field">
                   <label class="label-with-icon">
                     <Command size={14} class="icon" />
-                    Stop Shortcut
+                    Pause Shortcut
                   </label>
                   <div class="field-row">
                     <button
                       type="button"
-                      class={`btn ghost shortcut-capture ${captureTarget === "stop" ? "capturing" : ""}`}
+                      class={`btn ghost shortcut-capture ${captureTarget === "pause" ? "capturing" : ""}`}
                       onClick={() =>
-                        setCaptureTarget((current) => (current === "stop" ? null : "stop"))
+                        setCaptureTarget((current) => (current === "pause" ? null : "pause"))
                       }
                     >
-                      {captureTarget === "stop"
+                      {captureTarget === "pause"
                         ? "Press shortcut... (Esc to cancel)"
-                        : draft?.stopShortcut ?? "Set shortcut"}
+                        : draft?.pauseShortcut ?? "Set shortcut"}
                     </button>
                     <button
                       class="btn ghost compact"
                       type="button"
-                      title="Clear stop shortcut"
+                      title="Clear pause shortcut"
                       onClick={() =>
-                        setDraft((current) => (current ? { ...current, stopShortcut: null } : current))
+                        setDraft((current) => (current ? { ...current, pauseShortcut: null } : current))
                       }
                     >
                       <Trash2 size={14} />
