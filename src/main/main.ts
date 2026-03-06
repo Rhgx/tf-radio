@@ -23,7 +23,7 @@ import {
   resolveRconPort,
   validateRconLaunchOptions
 } from "./services/tf2-discovery.js";
-import { resolveYoutubeTrack } from "./services/youtube.js";
+import { TrackDurationLimitError, resolveYoutubeTrack } from "./services/youtube.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -645,6 +645,14 @@ function looksLikeLink(value: string): boolean {
   return /^(https?:\/\/|www\.|(?:music\.)?youtube\.com\/|youtu\.be\/)/i.test(trimmed);
 }
 
+function normalizeMaxAudioDurationSec(value: number | undefined): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || Number.isNaN(value)) {
+    return 390;
+  }
+
+  return Math.max(1, Math.min(86400, value));
+}
+
 function getRequesterActiveTrackCount(requester: string): number {
   const normalizedRequester = normalizeRequester(requester);
   let count = 0;
@@ -787,13 +795,15 @@ function clearUpcomingQueue(): number {
 async function processPlayCommand(speaker: string, query: string): Promise<void> {
   pushLog(`Command from ${speaker}: ${query}`);
 
-  if (!settingsService.getSettings().chatLinksEnabled && looksLikeLink(query)) {
+  const settings = settingsService.getSettings();
+
+  if (!settings.chatLinksEnabled && looksLikeLink(query)) {
     pushLog(`Rejected link from ${speaker}: chat links are disabled.`);
     await sendChatMessage("Links in chat are disabled.");
     return;
   }
 
-  const maxTracksPerUser = Math.max(1, Math.min(20, settingsService.getSettings().maxTracksPerUser));
+  const maxTracksPerUser = Math.max(1, Math.min(20, settings.maxTracksPerUser));
   const activeTrackCount = getRequesterActiveTrackCount(speaker);
   if (activeTrackCount >= maxTracksPerUser) {
     pushLog(
@@ -804,8 +814,13 @@ async function processPlayCommand(speaker: string, query: string): Promise<void>
   }
 
   try {
-    const track = await resolveYoutubeTrack(query, speaker);
+    const track = await resolveYoutubeTrack(
+      query,
+      speaker,
+      normalizeMaxAudioDurationSec(settings.maxAudioDurationSec)
+    );
     enqueuePlayback(track);
+    updateState({ lastError: null, setupIssue: null });
     pushLog(`Queued: ${track.title} (${track.channel})`);
     await sendChatMessage(`Queued: ${track.title}`);
   } catch (error) {
@@ -817,7 +832,9 @@ async function processPlayCommand(speaker: string, query: string): Promise<void>
       setupIssue: { code: "yt_dlp_error", message }
     });
     pushLog(message);
-    await sendChatMessage("Could not play that query.");
+    await sendChatMessage(
+      error instanceof TrackDurationLimitError ? error.message : "Could not play that query."
+    );
   }
 }
 
@@ -1297,12 +1314,18 @@ function registerIpcHandlers(): void {
     const speaker = settings.playerName || "UI";
 
     try {
-      const track = await resolveYoutubeTrack(trimmed, speaker);
+      const track = await resolveYoutubeTrack(
+        trimmed,
+        speaker,
+        normalizeMaxAudioDurationSec(settings.maxAudioDurationSec)
+      );
       enqueuePlayback(track);
+      updateState({ lastError: null, setupIssue: null });
       pushLog(`Queued from UI: ${track.title} (${track.channel})`);
       return { ok: true };
     } catch (error) {
       const message = `Failed to resolve "${trimmed}": ${String(error)}`;
+      updateState({ lastError: message });
       pushLog(message);
       return { ok: false, reason: message };
     }

@@ -77,6 +77,27 @@ function normalizeMaxTracksPerUser(value: number | undefined): number {
   return Math.min(20, Math.max(1, Math.round(value!)));
 }
 
+function normalizeMaxAudioDurationSec(value: number | undefined): number {
+  if (!Number.isFinite(value ?? NaN)) {
+    return 390;
+  }
+
+  return Math.min(86400, Math.max(1, Math.round(value!)));
+}
+
+function formatDurationLabel(totalSeconds: number | undefined): string {
+  const safeSeconds = normalizeMaxAudioDurationSec(totalSeconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 type SettingsTab = "general" | "audio" | "automation" | "ui";
 type CaptureTarget = "skip" | "pause" | "stop" | null;
 
@@ -581,6 +602,7 @@ export function App() {
       clearLogsOnStartup: draft.clearLogsOnStartup,
       inGameVolume: normalizeVolume(draft.inGameVolume),
       playbackVolume: normalizeVolume(draft.playbackVolume),
+      maxAudioDurationSec: normalizeMaxAudioDurationSec(draft.maxAudioDurationSec),
       maxTracksPerUser: normalizeMaxTracksPerUser(draft.maxTracksPerUser),
       minimizeToTray: Boolean(draft.minimizeToTray),
       overlayEnabled: Boolean(draft.overlayEnabled),
@@ -610,8 +632,10 @@ export function App() {
 
     setAddingToQueue(true);
     try {
-      await window.tfRadio.addToQueue(trimmed);
-      setQueueInput("");
+      const result = await window.tfRadio.addToQueue(trimmed);
+      if (result.ok) {
+        setQueueInput("");
+      }
     } finally {
       setAddingToQueue(false);
     }
@@ -1048,6 +1072,34 @@ export function App() {
                           ? {
                               ...current,
                               maxTracksPerUser: normalizeMaxTracksPerUser(
+                                Number((event.currentTarget as HTMLInputElement).value)
+                              )
+                            }
+                          : current
+                      )
+                    }
+                  />
+                </div>
+                <div class="field">
+                  <label class="label-with-icon">
+                    <Music2 size={14} class="icon" />
+                    Max Audio Time: {formatDurationLabel(draft?.maxAudioDurationSec)}
+                  </label>
+                  <p class="field-caption">
+                    Searches try the top 5 matches and skip anything longer than this limit.
+                  </p>
+                  <input
+                    type="number"
+                    min="1"
+                    max="86400"
+                    step="1"
+                    value={normalizeMaxAudioDurationSec(draft?.maxAudioDurationSec)}
+                    onInput={(event) =>
+                      setDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              maxAudioDurationSec: normalizeMaxAudioDurationSec(
                                 Number((event.currentTarget as HTMLInputElement).value)
                               )
                             }

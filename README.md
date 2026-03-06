@@ -10,6 +10,11 @@ Electron app for Windows and Linux that listens to TF2 `console.log` for:
 
 It resolves tracks with `yt-dlp`, routes audio into your selected output device (VB-CABLE recommended), optionally mirrors audio to speakers, and toggles TF2 voice transmit via RCON (`+voicerecord` / `-voicerecord`); recommend unbinding your push to talk key during the duration of this.
 
+> [!CAUTION]
+> This program interacts with TF2, audio-routing tools, and local input/network behavior in ways that can trigger false positives from anti-cheat or anti-tamper systems. Use it at your own risk, and avoid running it in environments where third-party tools may be restricted.
+>
+> ![Anti-cheat caution](src/images/ban.png)
+
 ## Requirements
 
 - Windows 10/11 or a modern Linux desktop
@@ -78,6 +83,7 @@ npm run dist:linux:appimage
 - Queue mode is FIFO. Tracks can be added from the UI (search or YouTube link) or via `?play` in TF2 chat.
 - Individual queue items can be removed from the UI.
 - Per-user queue cap is configurable in Settings (default: `1`).
+- Max audio time is configurable in Settings (default: `6:30` / `390` seconds). Searches check up to the top 5 matches and skip tracks that exceed the limit.
 - `Clear logs upon startup` is disabled by default.
 - `?skip`, `?pause`, `?resume`, and `?stop` chat commands are disabled by default and can be enabled in Settings.
 - Direct links in chat `?play` commands can be allowed or blocked from Settings.

@@ -41,6 +41,19 @@ interface CachedTrackMetadata {
 const TRACK_CACHE_TTL_MS = 10 * 60 * 1000;
 const trackCache = new Map<string, { at: number; value: CachedTrackMetadata }>();
 
+const YOUTUBE_URL_PREFIX = "https://www.youtube.com/watch?v=";
+
+export class TrackDurationLimitError extends Error {
+  readonly code = "track_duration_limit";
+  readonly maxDurationSec: number;
+
+  constructor(maxDurationSec: number) {
+    super(`Songs are too long for the current ${formatDuration(maxDurationSec)} limit.`);
+    this.name = "TrackDurationLimitError";
+    this.maxDurationSec = maxDurationSec;
+  }
+}
+
 function extractEntry(raw: unknown): YtEntry | null {
   if (!raw) {
     return null;
@@ -61,6 +74,28 @@ function extractEntry(raw: unknown): YtEntry | null {
   }
 
   return entry;
+}
+
+function extractEntries(raw: unknown): YtEntry[] {
+  if (!raw) {
+    return [];
+  }
+
+  let parsed = raw;
+  if (typeof raw === "string") {
+    parsed = JSON.parse(raw) as YtEntry;
+  }
+
+  if (typeof parsed !== "object" || parsed === null) {
+    return [];
+  }
+
+  const entry = parsed as YtEntry;
+  if (Array.isArray(entry.entries)) {
+    return entry.entries.filter((candidate) => typeof candidate === "object" && candidate !== null);
+  }
+
+  return [entry];
 }
 
 function pickStreamUrl(entry: YtEntry): string | null {
@@ -94,42 +129,144 @@ function pickThumbnailUrl(entry: YtEntry): string | null {
   return null;
 }
 
-export async function resolveYoutubeTrack(query: string, requestedBy: string): Promise<QueueItem> {
-  const cacheKey = query.trim().toLowerCase();
-  const cached = trackCache.get(cacheKey);
-  if (cached && Date.now() - cached.at < TRACK_CACHE_TTL_MS) {
-    return buildQueueItem(cached.value, query, requestedBy);
+function looksLikeDirectYoutubeUrl(query: string): boolean {
+  const trimmed = query.trim();
+  return /^(https?:\/\/|www\.|(?:music\.)?youtube\.com\/|youtu\.be\/)/i.test(trimmed);
+}
+
+function formatDuration(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   }
 
-  const raw = await ytdlp(`ytsearch1:${query}`, {
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function candidateSource(entry: YtEntry): string | null {
+  if (entry.webpage_url) {
+    return entry.webpage_url;
+  }
+
+  if (entry.id) {
+    return `${YOUTUBE_URL_PREFIX}${entry.id}`;
+  }
+
+  return null;
+}
+
+function withinDurationLimit(durationSec: number | null, maxDurationSec: number): boolean {
+  return typeof durationSec === "number" && durationSec <= maxDurationSec;
+}
+
+async function queryYtDlp(target: string, options?: { defaultSearch?: string }): Promise<unknown> {
+  return ytdlp(target, {
     dumpSingleJson: true,
     noPlaylist: true,
     quiet: true,
     noWarnings: true,
-    defaultSearch: "ytsearch1",
+    defaultSearch: options?.defaultSearch,
     skipDownload: true,
     preferFreeFormats: true
   });
+}
 
-  const entry = extractEntry(raw);
-  if (!entry) {
-    throw new Error("yt-dlp returned no result entry.");
-  }
-
+function buildMetadata(entry: YtEntry, fallbackQuery: string): CachedTrackMetadata {
   const streamUrl = pickStreamUrl(entry);
   if (!streamUrl) {
     throw new Error("Could not resolve a playable stream URL from yt-dlp output.");
   }
 
-  const metadata: CachedTrackMetadata = {
+  return {
     sourceId: entry.id ?? `${Date.now()}`,
-    title: entry.title ?? query,
+    title: entry.title ?? fallbackQuery,
     channel: entry.channel ?? entry.uploader ?? "Unknown channel",
     durationSec: typeof entry.duration === "number" ? entry.duration : null,
     webpageUrl: entry.webpage_url ?? "",
     streamUrl,
     thumbnailUrl: pickThumbnailUrl(entry)
   };
+}
+
+async function resolveEntryFromSource(source: string): Promise<YtEntry | null> {
+  const raw = await queryYtDlp(source);
+  return extractEntry(raw);
+}
+
+async function resolveSearchTrack(query: string, maxDurationSec: number): Promise<CachedTrackMetadata> {
+  const raw = await queryYtDlp(`ytsearch5:${query}`, { defaultSearch: "ytsearch5" });
+  const entries = extractEntries(raw).slice(0, 5);
+  if (entries.length === 0) {
+    throw new Error("yt-dlp returned no result entry.");
+  }
+
+  let rejectedByDuration = false;
+
+  for (const candidate of entries) {
+    const initialDuration = typeof candidate.duration === "number" ? candidate.duration : null;
+    if (initialDuration !== null && initialDuration > maxDurationSec) {
+      rejectedByDuration = true;
+      continue;
+    }
+
+    const source = candidateSource(candidate);
+    if (!source) {
+      continue;
+    }
+
+    const resolvedEntry = await resolveEntryFromSource(source);
+    if (!resolvedEntry) {
+      continue;
+    }
+
+    const resolvedDuration = typeof resolvedEntry.duration === "number" ? resolvedEntry.duration : null;
+    if (!withinDurationLimit(resolvedDuration, maxDurationSec)) {
+      rejectedByDuration = true;
+      continue;
+    }
+
+    return buildMetadata(resolvedEntry, query);
+  }
+
+  if (rejectedByDuration) {
+    throw new TrackDurationLimitError(maxDurationSec);
+  }
+
+  throw new Error("Could not resolve a playable stream URL from yt-dlp output.");
+}
+
+async function resolveDirectTrack(query: string, maxDurationSec: number): Promise<CachedTrackMetadata> {
+  const entry = await resolveEntryFromSource(query);
+  if (!entry) {
+    throw new Error("yt-dlp returned no result entry.");
+  }
+
+  const durationSec = typeof entry.duration === "number" ? entry.duration : null;
+  if (!withinDurationLimit(durationSec, maxDurationSec)) {
+    throw new TrackDurationLimitError(maxDurationSec);
+  }
+
+  return buildMetadata(entry, query);
+}
+
+export async function resolveYoutubeTrack(
+  query: string,
+  requestedBy: string,
+  maxDurationSec: number
+): Promise<QueueItem> {
+  const cacheKey = JSON.stringify([query.trim().toLowerCase(), Math.max(1, Math.floor(maxDurationSec))]);
+  const cached = trackCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < TRACK_CACHE_TTL_MS) {
+    return buildQueueItem(cached.value, query, requestedBy);
+  }
+
+  const metadata = looksLikeDirectYoutubeUrl(query)
+    ? await resolveDirectTrack(query, maxDurationSec)
+    : await resolveSearchTrack(query, maxDurationSec);
 
   trackCache.set(cacheKey, { at: Date.now(), value: metadata });
   pruneTrackCache();

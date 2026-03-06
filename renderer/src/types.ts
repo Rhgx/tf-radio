@@ -15,6 +15,7 @@ export interface Settings {
   mirrorToDefaultSpeaker: boolean;
   inGameVolume: number;
   playbackVolume: number;
+  maxAudioDurationSec: number;
   maxTracksPerUser: number;
   minimizeToTray: boolean;
   overlayEnabled: boolean;

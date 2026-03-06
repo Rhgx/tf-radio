@@ -22,6 +22,7 @@ const settingsPatchSchema = z
     mirrorToDefaultSpeaker: z.boolean(),
     inGameVolume: z.number().min(0).max(1),
     playbackVolume: z.number().min(0).max(1),
+    maxAudioDurationSec: z.number().int().min(1).max(86400),
     maxTracksPerUser: z.number().int().min(1).max(20),
     minimizeToTray: z.boolean(),
     overlayEnabled: z.boolean(),
@@ -49,6 +50,14 @@ function normalizeStoredVolume(value: number | undefined): number {
   return Math.max(0, Math.min(1, value));
 }
 
+function normalizeStoredMaxAudioDurationSec(value: number | undefined): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || Number.isNaN(value)) {
+    return 390;
+  }
+
+  return Math.max(1, Math.min(86400, value));
+}
+
 function defaults(): Settings {
   return {
     tf2Path: null,
@@ -64,6 +73,7 @@ function defaults(): Settings {
     mirrorToDefaultSpeaker: false,
     inGameVolume: 1,
     playbackVolume: 1,
+    maxAudioDurationSec: 390,
     maxTracksPerUser: 1,
     minimizeToTray: true,
     overlayEnabled: false,
@@ -120,6 +130,14 @@ export class SettingsService {
       this.store.set("settings", existing);
     } else if (existing.playbackVolume < 0 || existing.playbackVolume > 1) {
       existing.playbackVolume = Math.max(0, Math.min(1, existing.playbackVolume));
+      this.store.set("settings", existing);
+    }
+
+    if (!Number.isInteger(existing.maxAudioDurationSec)) {
+      existing.maxAudioDurationSec = 390;
+      this.store.set("settings", existing);
+    } else if (existing.maxAudioDurationSec < 1 || existing.maxAudioDurationSec > 86400) {
+      existing.maxAudioDurationSec = normalizeStoredMaxAudioDurationSec(existing.maxAudioDurationSec);
       this.store.set("settings", existing);
     }
 
