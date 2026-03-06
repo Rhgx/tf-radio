@@ -1,0 +1,65 @@
+{
+  "name": "tf-radio",
+  "version": "1.0.0",
+  "description": "TF2 radio bot with Electron control panel",
+  "private": true,
+  "type": "module",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "npm run build:main && npm run build:renderer",
+    "build:main": "tsc -p tsconfig.json",
+    "build:renderer": "vite build --config vite.renderer.config.ts",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "start": "npm run build && electron .",
+    "dist:win": "npm run build && electron-builder --win portable",
+    "dist:win:dir": "npm run build && electron-builder --win dir",
+    "dist:linux": "npm run build && electron-builder --linux tar.gz",
+    "dist:linux:dir": "npm run build && electron-builder --linux dir",
+    "dist:linux:appimage": "npm run build && electron-builder --linux AppImage"
+  },
+  "dependencies": {
+    "electron-store": "^10.1.0",
+    "lucide-preact": "^0.577.0",
+    "preact": "^10.27.2",
+    "rcon-srcds": "^2.1.0",
+    "youtube-dl-exec": "^3.0.22",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.2",
+    "@types/node": "^24.6.0",
+    "electron": "^40.7.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.7"
+  },
+  "build": {
+    "appId": "com.tf-radio.app",
+    "productName": "TF2 Radio",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "renderer/favicon.ico",
+      "renderer/assets/tf2-icon-purple.png",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "renderer/favicon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "renderer/assets/tf2-icon-purple.png",
+      "category": "AudioVideo"
+    }
+  }
+}

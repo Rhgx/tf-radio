@@ -1,0 +1,639 @@
+:root {
+  --background: oklch(0.145 0.01 255.4);
+  --foreground: oklch(0.92 0.01 255.4);
+  --card: oklch(0.2 0.012 255.2);
+  --card-foreground: oklch(0.92 0.01 255.4);
+  --muted: oklch(0.255 0.013 255.5);
+  --muted-foreground: oklch(0.74 0.012 256.1);
+  --border: oklch(0.32 0.014 255.8);
+  --primary: #92268d;
+  --primary-foreground: #f8f7fb;
+  --ring: #9d2e97;
+  --radius: 0.75rem;
+  --ok: oklch(0.62 0.18 147.6);
+  --bad: oklch(0.62 0.21 26.3);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: "Geist", "Segoe UI", sans-serif;
+  color: var(--foreground);
+  background: var(--background);
+  overflow: hidden;
+}
+
+/* ── Shell ── */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Top Bar ── */
+
+.top-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 46px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card), black 16%);
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 0.18rem);
+  background: color-mix(in oklab, var(--muted), black 12%);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease;
+}
+
+.icon-btn:hover {
+  border-color: color-mix(in oklab, var(--primary), black 34%);
+  color: var(--foreground);
+}
+
+.icon-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring), black 52%);
+  border-color: var(--primary);
+}
+
+/* ── Status Chips ── */
+
+.chip {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.chip.ok {
+  color: color-mix(in oklab, var(--ok), white 25%);
+  background: color-mix(in oklab, var(--ok), black 78%);
+  border-color: color-mix(in oklab, var(--ok), black 60%);
+}
+
+.chip.bad {
+  color: color-mix(in oklab, var(--bad), white 28%);
+  background: color-mix(in oklab, var(--bad), black 80%);
+  border-color: color-mix(in oklab, var(--bad), black 62%);
+}
+
+/* ── Alert Banner ── */
+
+.alert-banner {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  background: color-mix(in oklab, var(--bad), black 82%);
+  border-bottom: 1px solid color-mix(in oklab, var(--bad), black 62%);
+}
+
+.alert-text {
+  margin: 0;
+  font-size: 0.8rem;
+  color: color-mix(in oklab, var(--bad), white 32%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alert-actions {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.alert-actions-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--bad), white 26%);
+}
+
+.alert-copy-btn {
+  white-space: nowrap;
+}
+
+.hint {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  font-size: 0.78rem;
+  padding: 8px 10px;
+  border-radius: calc(var(--radius) - 0.18rem);
+  border: 1px solid color-mix(in oklab, var(--bad), black 62%);
+  background: color-mix(in oklab, var(--bad), black 80%);
+}
+
+/* ── Main Content ── */
+
+.main-content {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* ── Card ── */
+
+.card {
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card), black 16%);
+  border-radius: calc(var(--radius) + 2px);
+  box-shadow: none;
+  padding: 14px 16px;
+}
+
+/* ── Player Section ── */
+
+.player-section {
+  flex: 0 0 auto;
+}
+
+.player-info {
+  margin-bottom: 12px;
+}
+
+.player-label {
+  margin: 0 0 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+}
+
+.player-title {
+  margin: 0 0 3px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.player-meta {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+}
+
+.controls-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.controls-row .btn {
+  flex: 1;
+}
+
+.stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  padding: 4px 10px;
+  border-radius: calc(var(--radius) - 0.18rem);
+  background: color-mix(in oklab, var(--muted), black 12%);
+  border: 1px solid color-mix(in oklab, var(--border), transparent 40%);
+}
+
+/* ── Panels ── */
+
+.panels {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex: 0 0 auto;
+}
+
+.panel-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: color-mix(in oklab, var(--primary), black 64%);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.panel-body {
+  flex: 1 1 0;
+  overflow-y: auto;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 0.18rem);
+  background: color-mix(in oklab, var(--muted), black 8%);
+  padding: 6px;
+}
+
+.panel-empty {
+  margin: 0;
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+}
+
+/* ── Queue ── */
+
+.queue-list {
+  display: grid;
+  gap: 2px;
+}
+
+.queue-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: calc(var(--radius) - 0.24rem);
+  transition: background 100ms ease;
+}
+
+.queue-item:hover {
+  background: color-mix(in oklab, var(--muted), black 4%);
+}
+
+.queue-num {
+  flex: 0 0 auto;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  padding-top: 1px;
+}
+
+.queue-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.queue-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-requester {
+  font-size: 0.74rem;
+  color: var(--muted-foreground);
+}
+
+/* ── Logs ── */
+
+.log-line {
+  font-size: 0.78rem;
+  padding: 3px 6px;
+  border-bottom: 1px solid color-mix(in oklab, var(--border), transparent 50%);
+  word-break: break-word;
+}
+
+.log-line:last-of-type {
+  border-bottom: none;
+}
+
+/* ── Headings ── */
+
+h2 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.heading-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.icon {
+  flex: 0 0 auto;
+}
+
+/* ── Buttons ── */
+
+.btn {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 0.18rem);
+  background: color-mix(in oklab, var(--muted), black 24%);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.btn:hover {
+  transform: none;
+  border-color: color-mix(in oklab, var(--primary), black 34%);
+  box-shadow: none;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring), black 52%);
+  border-color: var(--primary);
+}
+
+.btn.primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: color-mix(in oklab, var(--primary), black 10%);
+}
+
+.btn.ghost {
+  background: color-mix(in oklab, var(--muted), black 12%);
+}
+
+.btn.compact {
+  padding: 8px;
+  flex: 0 0 auto;
+}
+
+.btn-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+/* ── Modal ── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(8, 10, 14, 0.72);
+}
+
+.modal {
+  width: min(580px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.modal-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ── Settings Tabs ── */
+
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.tab-btn {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 0.18rem);
+  background: color-mix(in oklab, var(--muted), black 16%);
+  color: var(--muted-foreground);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.tab-btn:hover {
+  color: var(--foreground);
+  border-color: color-mix(in oklab, var(--border), white 8%);
+}
+
+.tab-btn.active {
+  color: var(--foreground);
+  border-color: color-mix(in oklab, var(--primary), black 22%);
+  background: color-mix(in oklab, var(--primary), black 74%);
+}
+
+.settings-pane {
+  margin-bottom: 10px;
+}
+
+/* ── Form Fields ── */
+
+.field {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.field-row {
+  display: flex;
+  gap: 6px;
+}
+
+.field-row select {
+  flex: 1;
+}
+
+.shortcut-capture {
+  flex: 1;
+  justify-content: flex-start;
+  text-align: left;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+.shortcut-capture.capturing {
+  border-color: color-mix(in oklab, var(--primary), black 22%);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring), black 52%);
+  color: var(--foreground);
+}
+
+.field label,
+.toggle {
+  font-size: 0.77rem;
+  color: var(--muted-foreground);
+}
+
+.label-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+input,
+select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 0.18rem);
+  padding: 10px;
+  font: inherit;
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--card), black 20%);
+}
+
+input[type="range"] {
+  padding: 0;
+  accent-color: var(--primary);
+}
+
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring), black 52%);
+  border-color: var(--primary);
+}
+
+.toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  color: var(--foreground);
+}
+
+.toggle input {
+  width: auto;
+  margin: 0;
+}
+
+code {
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--muted), black 12%);
+  padding: 2px 5px;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 760px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .main-content {
+    overflow: visible;
+  }
+
+  .controls-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .panels {
+    grid-template-columns: 1fr;
+    flex: 0 0 auto;
+  }
+
+  .panel-body {
+    max-height: 280px;
+  }
+
+  .settings-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .alert-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
