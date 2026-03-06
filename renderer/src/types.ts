@@ -13,7 +13,8 @@ export interface Settings {
   rconPassword: string;
   outputDeviceId: string | null;
   mirrorToDefaultSpeaker: boolean;
-  botVolume: number;
+  inGameVolume: number;
+  playbackVolume: number;
   maxTracksPerUser: number;
   minimizeToTray: boolean;
   overlayEnabled: boolean;

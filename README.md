@@ -84,6 +84,6 @@ npm run dist:linux:appimage
 - Skip/Pause-Resume/Stop keyboard shortcuts are configurable in Settings with click-to-capture buttons (`Esc` cancels capture).
 - Shortcuts are registered with Electron global shortcuts and work while the app is unfocused.
 - Optional bot chat responses can be enabled in Settings (`say` over RCON).
-- Bot playback volume is adjustable from the Settings modal.
+- Separate in-game and mirrored playback volume sliders are available in the Settings modal.
 - `Minimize/close to tray` is available from Settings (system tray icon support).
 - Optional top-left now playing overlay with cover art/current/next song is available from Settings.

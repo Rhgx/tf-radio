@@ -65,6 +65,10 @@ function normalizeVolume(value: number | undefined): number {
   return Math.min(1, Math.max(0, value));
 }
 
+function formatVolumePercent(value: number | undefined): string {
+  return `${Math.round(normalizeVolume(value) * 100)}%`;
+}
+
 function normalizeMaxTracksPerUser(value: number | undefined): number {
   if (!Number.isFinite(value ?? NaN)) {
     return 1;
@@ -258,7 +262,7 @@ export function App() {
     terminalNotifiedAttemptRef.current = -1;
 
     try {
-      applyVolume(activeSettings);
+      applyVolumes(activeSettings);
       mirrorAudio.muted = !activeSettings.mirrorToDefaultSpeaker;
       await micAudio.play();
       if (attemptId !== playbackAttemptRef.current) {
@@ -285,15 +289,51 @@ export function App() {
     }
   }
 
-  function applyVolume(nextSettings: Settings | null): void {
-    const volume = normalizeVolume(nextSettings?.botVolume);
-
+  function applyVolumes(nextSettings: Settings | null): void {
     if (micAudioRef.current) {
-      micAudioRef.current.volume = volume;
+      micAudioRef.current.volume = normalizeVolume(nextSettings?.inGameVolume);
     }
 
     if (mirrorAudioRef.current) {
-      mirrorAudioRef.current.volume = volume;
+      mirrorAudioRef.current.volume = normalizeVolume(nextSettings?.playbackVolume);
+    }
+  }
+
+  async function syncAudioSettings(nextSettings: Settings | null): Promise<void> {
+    applyVolumes(nextSettings);
+
+    const micAudio = micAudioRef.current;
+    const mirrorAudio = mirrorAudioRef.current;
+    if (!mirrorAudio) {
+      return;
+    }
+
+    if (!nextSettings?.mirrorToDefaultSpeaker) {
+      mirrorAudio.muted = true;
+      mirrorAudio.pause();
+      return;
+    }
+
+    mirrorAudio.muted = false;
+
+    if (!micAudio?.src) {
+      return;
+    }
+
+    if (mirrorAudio.src !== micAudio.src) {
+      mirrorAudio.src = micAudio.src;
+    }
+
+    if (Math.abs(mirrorAudio.currentTime - micAudio.currentTime) > 1) {
+      mirrorAudio.currentTime = micAudio.currentTime;
+    }
+
+    if (!micAudio.paused) {
+      try {
+        await mirrorAudio.play();
+      } catch {
+        // Mirror playback is optional.
+      }
     }
   }
 
@@ -322,7 +362,7 @@ export function App() {
         }
       }
 
-      applyVolume(activeSettings);
+      applyVolumes(activeSettings);
       micAudio.src = track.streamUrl;
       await micAudio.play();
       if (attemptId !== playbackAttemptRef.current) {
@@ -369,7 +409,7 @@ export function App() {
       setSettings(payload.settings);
       settingsRef.current = payload.settings;
       setDraft(payload.settings);
-      applyVolume(payload.settings);
+      applyVolumes(payload.settings);
       setState(payload.state);
       setLogs(payload.logs);
       await refreshDevices();
@@ -539,7 +579,8 @@ export function App() {
       outputDeviceId: draft.outputDeviceId,
       mirrorToDefaultSpeaker: draft.mirrorToDefaultSpeaker,
       clearLogsOnStartup: draft.clearLogsOnStartup,
-      botVolume: normalizeVolume(draft.botVolume),
+      inGameVolume: normalizeVolume(draft.inGameVolume),
+      playbackVolume: normalizeVolume(draft.playbackVolume),
       maxTracksPerUser: normalizeMaxTracksPerUser(draft.maxTracksPerUser),
       minimizeToTray: Boolean(draft.minimizeToTray),
       overlayEnabled: Boolean(draft.overlayEnabled),
@@ -556,7 +597,7 @@ export function App() {
     setSettings(next);
     settingsRef.current = next;
     setDraft(next);
-    applyVolume(next);
+    await syncAudioSettings(next);
     setCaptureTarget(null);
     setSettingsOpen(false);
   }
@@ -734,7 +775,15 @@ export function App() {
             </div>
             <div class="stat-item">
               <Volume2 size={12} class="icon" />
-              <span>{Math.round(normalizeVolume(settings?.botVolume) * 100)}%</span>
+              <span>Game {formatVolumePercent(settings?.inGameVolume)}</span>
+            </div>
+            <div class="stat-item">
+              <MonitorSpeaker size={12} class="icon" />
+              <span>
+                {settings?.mirrorToDefaultSpeaker
+                  ? `Monitor ${formatVolumePercent(settings?.playbackVolume)}`
+                  : "Monitor off"}
+              </span>
             </div>
             <div class="stat-item">
               <Music2 size={12} class="icon" />
@@ -1071,20 +1120,48 @@ export function App() {
                 <div class="field">
                   <label class="label-with-icon">
                     <Volume2 size={14} class="icon" />
-                    Bot Volume: {Math.round(normalizeVolume(draft?.botVolume) * 100)}%
+                    In-Game Volume: {formatVolumePercent(draft?.inGameVolume)}
                   </label>
+                  <p class="field-caption">Sent to the selected output device or virtual cable.</p>
                   <input
                     type="range"
                     min="0"
                     max="100"
                     step="1"
-                    value={Math.round(normalizeVolume(draft?.botVolume) * 100)}
+                    value={Math.round(normalizeVolume(draft?.inGameVolume) * 100)}
                     onInput={(event) =>
                       setDraft((current) =>
                         current
                           ? {
                               ...current,
-                              botVolume: Number((event.currentTarget as HTMLInputElement).value) / 100
+                              inGameVolume:
+                                Number((event.currentTarget as HTMLInputElement).value) / 100
+                            }
+                          : current
+                      )
+                    }
+                  />
+                </div>
+                <div class="field">
+                  <label class="label-with-icon">
+                    <MonitorSpeaker size={14} class="icon" />
+                    Playback Volume: {formatVolumePercent(draft?.playbackVolume)}
+                  </label>
+                  <p class="field-caption">Used for the local speaker mirror only.</p>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={Math.round(normalizeVolume(draft?.playbackVolume) * 100)}
+                    disabled={!draft?.mirrorToDefaultSpeaker}
+                    onInput={(event) =>
+                      setDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              playbackVolume:
+                                Number((event.currentTarget as HTMLInputElement).value) / 100
                             }
                           : current
                       )

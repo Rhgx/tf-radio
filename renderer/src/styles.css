@@ -643,6 +643,12 @@ h2 {
   margin-bottom: 10px;
 }
 
+.field-caption {
+  margin: -1px 0 4px;
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+}
+
 .field-row {
   display: flex;
   gap: 6px;
@@ -691,6 +697,11 @@ select {
 input[type="range"] {
   padding: 0;
   accent-color: var(--primary);
+}
+
+input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 input:focus,

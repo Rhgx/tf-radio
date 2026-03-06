@@ -20,7 +20,8 @@ const settingsPatchSchema = z
     rconPort: z.number().int().min(1).max(65535),
     outputDeviceId: z.string().min(1).nullable(),
     mirrorToDefaultSpeaker: z.boolean(),
-    botVolume: z.number().min(0).max(1),
+    inGameVolume: z.number().min(0).max(1),
+    playbackVolume: z.number().min(0).max(1),
     maxTracksPerUser: z.number().int().min(1).max(20),
     minimizeToTray: z.boolean(),
     overlayEnabled: z.boolean(),
@@ -40,6 +41,14 @@ function generatePassword(): string {
   return `tf2r_${crypto.randomBytes(10).toString("hex")}`;
 }
 
+function normalizeStoredVolume(value: number | undefined): number {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return 1;
+  }
+
+  return Math.max(0, Math.min(1, value));
+}
+
 function defaults(): Settings {
   return {
     tf2Path: null,
@@ -53,7 +62,8 @@ function defaults(): Settings {
     rconPassword: generatePassword(),
     outputDeviceId: null,
     mirrorToDefaultSpeaker: false,
-    botVolume: 1,
+    inGameVolume: 1,
+    playbackVolume: 1,
     maxTracksPerUser: 1,
     minimizeToTray: true,
     overlayEnabled: false,
@@ -80,7 +90,11 @@ export class SettingsService {
       }
     });
 
-    const existing = this.store.get("settings");
+    const existing = this.store.get("settings") as Settings & {
+      botVolume?: number;
+      inGameVolume?: number;
+      playbackVolume?: number;
+    };
     if (!existing.rconPassword || existing.rconPassword.length < 8) {
       existing.rconPassword = generatePassword();
       this.store.set("settings", existing);
@@ -91,11 +105,21 @@ export class SettingsService {
       this.store.set("settings", existing);
     }
 
-    if (typeof existing.botVolume !== "number" || Number.isNaN(existing.botVolume)) {
-      existing.botVolume = 1;
+    const legacyVolume = normalizeStoredVolume(existing.botVolume);
+
+    if (typeof existing.inGameVolume !== "number" || Number.isNaN(existing.inGameVolume)) {
+      existing.inGameVolume = legacyVolume;
       this.store.set("settings", existing);
-    } else if (existing.botVolume < 0 || existing.botVolume > 1) {
-      existing.botVolume = Math.max(0, Math.min(1, existing.botVolume));
+    } else if (existing.inGameVolume < 0 || existing.inGameVolume > 1) {
+      existing.inGameVolume = Math.max(0, Math.min(1, existing.inGameVolume));
+      this.store.set("settings", existing);
+    }
+
+    if (typeof existing.playbackVolume !== "number" || Number.isNaN(existing.playbackVolume)) {
+      existing.playbackVolume = legacyVolume;
+      this.store.set("settings", existing);
+    } else if (existing.playbackVolume < 0 || existing.playbackVolume > 1) {
+      existing.playbackVolume = Math.max(0, Math.min(1, existing.playbackVolume));
       this.store.set("settings", existing);
     }
 
@@ -159,6 +183,11 @@ export class SettingsService {
     } else if (typeof existing.stopShortcut === "string" && existing.stopShortcut.trim().length === 0) {
       existing.stopShortcut = null;
       this.store.set("settings", existing);
+    }
+
+    if ("botVolume" in existing) {
+      const { botVolume: _botVolume, ...next } = existing;
+      this.store.set("settings", next as Settings);
     }
   }
 
