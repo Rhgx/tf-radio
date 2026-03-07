@@ -200,6 +200,10 @@ export function App() {
   const [queueInput, setQueueInput] = useState("");
   const [addingToQueue, setAddingToQueue] = useState(false);
 
+  function isSettingsTabActive(tab: SettingsTab): boolean {
+    return settingsTab === tab;
+  }
+
   function suppressMediaEventsTemporarily(durationMs = 150): void {
     mediaSuppressDepthRef.current += 1;
     window.setTimeout(() => {
@@ -956,10 +960,14 @@ export function App() {
               </button>
             </div>
 
-            <div class="settings-tabs">
+            <div class="settings-tabs" role="tablist" aria-label="Settings sections">
               <button
                 type="button"
-                class={`tab-btn ${settingsTab === "general" ? "active" : ""}`}
+                id="settings-tab-general"
+                role="tab"
+                aria-selected={isSettingsTabActive("general")}
+                aria-controls="settings-panel-general"
+                class={`tab-btn ${isSettingsTabActive("general") ? "active" : ""}`}
                 onClick={() => setSettingsTab("general")}
               >
                 <User size={14} class="icon" />
@@ -967,7 +975,11 @@ export function App() {
               </button>
               <button
                 type="button"
-                class={`tab-btn ${settingsTab === "audio" ? "active" : ""}`}
+                id="settings-tab-audio"
+                role="tab"
+                aria-selected={isSettingsTabActive("audio")}
+                aria-controls="settings-panel-audio"
+                class={`tab-btn ${isSettingsTabActive("audio") ? "active" : ""}`}
                 onClick={() => setSettingsTab("audio")}
               >
                 <Volume2 size={14} class="icon" />
@@ -975,7 +987,11 @@ export function App() {
               </button>
               <button
                 type="button"
-                class={`tab-btn ${settingsTab === "automation" ? "active" : ""}`}
+                id="settings-tab-automation"
+                role="tab"
+                aria-selected={isSettingsTabActive("automation")}
+                aria-controls="settings-panel-automation"
+                class={`tab-btn ${isSettingsTabActive("automation") ? "active" : ""}`}
                 onClick={() => setSettingsTab("automation")}
               >
                 <SlidersHorizontal size={14} class="icon" />
@@ -983,7 +999,11 @@ export function App() {
               </button>
               <button
                 type="button"
-                class={`tab-btn ${settingsTab === "ui" ? "active" : ""}`}
+                id="settings-tab-ui"
+                role="tab"
+                aria-selected={isSettingsTabActive("ui")}
+                aria-controls="settings-panel-ui"
+                class={`tab-btn ${isSettingsTabActive("ui") ? "active" : ""}`}
                 onClick={() => setSettingsTab("ui")}
               >
                 <PictureInPicture2 size={14} class="icon" />
@@ -991,8 +1011,14 @@ export function App() {
               </button>
             </div>
 
-            {settingsTab === "general" && (
-              <div class="settings-pane">
+            <div class="settings-stage">
+              <div
+                id="settings-panel-general"
+                role="tabpanel"
+                aria-labelledby="settings-tab-general"
+                aria-hidden={!isSettingsTabActive("general")}
+                class={`settings-pane ${isSettingsTabActive("general") ? "active" : ""}`}
+              >
                 <div class="field">
                   <label class="label-with-icon">
                     <FolderOpen size={14} class="icon" />
@@ -1126,10 +1152,14 @@ export function App() {
                   Clear logs on startup
                 </label>
               </div>
-            )}
 
-            {settingsTab === "audio" && (
-              <div class="settings-pane">
+              <div
+                id="settings-panel-audio"
+                role="tabpanel"
+                aria-labelledby="settings-tab-audio"
+                aria-hidden={!isSettingsTabActive("audio")}
+                class={`settings-pane ${isSettingsTabActive("audio") ? "active" : ""}`}
+              >
                 <div class="field">
                   <label class="label-with-icon">
                     <MonitorSpeaker size={14} class="icon" />
@@ -1239,10 +1269,14 @@ export function App() {
                   Mirror to default speakers
                 </label>
               </div>
-            )}
 
-            {settingsTab === "automation" && (
-              <div class="settings-pane">
+              <div
+                id="settings-panel-automation"
+                role="tabpanel"
+                aria-labelledby="settings-tab-automation"
+                aria-hidden={!isSettingsTabActive("automation")}
+                class={`settings-pane ${isSettingsTabActive("automation") ? "active" : ""}`}
+              >
                 <label class="toggle">
                   <input
                     type="checkbox"
@@ -1423,10 +1457,14 @@ export function App() {
                   </div>
                 </div>
               </div>
-            )}
 
-            {settingsTab === "ui" && (
-              <div class="settings-pane">
+              <div
+                id="settings-panel-ui"
+                role="tabpanel"
+                aria-labelledby="settings-tab-ui"
+                aria-hidden={!isSettingsTabActive("ui")}
+                class={`settings-pane ${isSettingsTabActive("ui") ? "active" : ""}`}
+              >
                 <label class="toggle">
                   <input
                     type="checkbox"
@@ -1464,7 +1502,7 @@ export function App() {
                   Show top-left now playing overlay
                 </label>
               </div>
-            )}
+            </div>
 
             <div class="modal-actions">
               <button class="btn primary" type="button" onClick={() => void saveSettings()}>
