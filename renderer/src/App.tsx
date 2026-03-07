@@ -32,6 +32,7 @@ import type {
   AppState,
   AudioOutputDevice,
   BootstrapPayload,
+  OverlayPosition,
   QueueItem,
   Settings,
   SetupRconRequiredPayload
@@ -101,6 +102,15 @@ function formatDurationLabel(totalSeconds: number | undefined): string {
 
 type SettingsTab = "general" | "audio" | "automation" | "ui";
 type CaptureTarget = "skip" | "pause" | "stop" | null;
+
+const OVERLAY_POSITION_OPTIONS: Array<{ value: OverlayPosition; label: string }> = [
+  { value: "top_left", label: "Top Left" },
+  { value: "top_right", label: "Top Right" },
+  { value: "center_left", label: "Center Left" },
+  { value: "center_right", label: "Center Right" },
+  { value: "bottom_left", label: "Bottom Left" },
+  { value: "bottom_right", label: "Bottom Right" }
+];
 
 interface SettingsToggleProps {
   checked: boolean;
@@ -689,6 +699,7 @@ export function App() {
       maxTracksPerUser: normalizeMaxTracksPerUser(draft.maxTracksPerUser),
       minimizeToTray: Boolean(draft.minimizeToTray),
       overlayEnabled: Boolean(draft.overlayEnabled),
+      overlayPosition: draft.overlayPosition,
       chatSkipCommandEnabled: Boolean(draft.chatSkipCommandEnabled),
       chatPauseCommandEnabled: Boolean(draft.chatPauseCommandEnabled),
       chatStopCommandEnabled: Boolean(draft.chatStopCommandEnabled),
@@ -1557,8 +1568,34 @@ export function App() {
                   }
                 >
                   <PictureInPicture2 size={14} class="icon" />
-                  Show top-left now playing overlay
+                  Show now playing overlay
                 </SettingsToggle>
+                <div class="field">
+                  <label class="label-with-icon">
+                    <PictureInPicture2 size={14} class="icon" />
+                    Overlay Position
+                  </label>
+                  <select
+                    value={draft?.overlayPosition ?? "top_left"}
+                    onChange={(event) =>
+                      setDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              overlayPosition: (event.currentTarget as HTMLSelectElement)
+                                .value as OverlayPosition
+                            }
+                          : current
+                      )
+                    }
+                  >
+                    {OVERLAY_POSITION_OPTIONS.map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 

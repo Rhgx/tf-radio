@@ -1,4 +1,11 @@
 export type CommandScope = "self" | "anyone";
+export type OverlayPosition =
+  | "top_left"
+  | "top_right"
+  | "center_left"
+  | "center_right"
+  | "bottom_left"
+  | "bottom_right";
 
 export type PlaybackState = "idle" | "buffering" | "playing" | "paused" | "error";
 
@@ -20,6 +27,7 @@ export interface Settings {
   maxTracksPerUser: number;
   minimizeToTray: boolean;
   overlayEnabled: boolean;
+  overlayPosition: OverlayPosition;
   chatSkipCommandEnabled: boolean;
   chatPauseCommandEnabled: boolean;
   chatStopCommandEnabled: boolean;

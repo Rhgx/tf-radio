@@ -95,7 +95,7 @@ function OverlayApp() {
         {coverUrl ? (
           <img src={coverUrl} alt={current?.title ?? "Cover"} class="cover" />
         ) : (
-          <div class="cover placeholder">TF2</div>
+          <div class="cover placeholder" aria-hidden="true" />
         )}
       </div>
       <div class="meta">

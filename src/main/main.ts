@@ -66,6 +66,7 @@ const MIN_WINDOW_WIDTH = 980;
 const MIN_WINDOW_HEIGHT = 700;
 const OVERLAY_WIDTH = 520;
 const OVERLAY_HEIGHT = 132;
+const OVERLAY_MARGIN = 14;
 const AUDIO_OUTPUT_CACHE_TTL_MS = 5_000;
 const LAUNCH_VALIDATION_CACHE_TTL_MS = 5_000;
 const INSTANCE_LOCK_FILENAME = "tf-radio.lock";
@@ -205,13 +206,45 @@ function getDefaultWindowSize(): { width: number; height: number } {
   return { width, height };
 }
 
-function getOverlayBounds(): Electron.Rectangle {
+function getOverlayBounds(settings: Settings): Electron.Rectangle {
   const area = screen.getPrimaryDisplay().workArea;
+  const width = Math.min(OVERLAY_WIDTH, Math.max(1, area.width - OVERLAY_MARGIN * 2));
+  const height = Math.min(OVERLAY_HEIGHT, Math.max(1, area.height - OVERLAY_MARGIN * 2));
+  const rightX = area.x + area.width - width - OVERLAY_MARGIN;
+  const centerY = area.y + Math.round((area.height - height) / 2);
+  const bottomY = area.y + area.height - height - OVERLAY_MARGIN;
+
+  let x = area.x + OVERLAY_MARGIN;
+  let y = area.y + OVERLAY_MARGIN;
+
+  switch (settings.overlayPosition) {
+    case "top_right":
+      x = rightX;
+      break;
+    case "center_left":
+      y = centerY;
+      break;
+    case "center_right":
+      x = rightX;
+      y = centerY;
+      break;
+    case "bottom_left":
+      y = bottomY;
+      break;
+    case "bottom_right":
+      x = rightX;
+      y = bottomY;
+      break;
+    case "top_left":
+    default:
+      break;
+  }
+
   return {
-    x: area.x + 14,
-    y: area.y + 14,
-    width: Math.min(OVERLAY_WIDTH, area.width - 28),
-    height: OVERLAY_HEIGHT
+    x,
+    y,
+    width,
+    height
   };
 }
 
@@ -252,6 +285,8 @@ function syncOverlayVisibility(): void {
   if (!overlayWindow) {
     return;
   }
+
+  overlayWindow.setBounds(getOverlayBounds(settings), false);
 
   if (!overlayWindow.isVisible()) {
     overlayWindow.showInactive();
@@ -1119,7 +1154,7 @@ async function createOverlayWindow(): Promise<void> {
     return;
   }
 
-  const bounds = getOverlayBounds();
+  const bounds = getOverlayBounds(settingsService.getSettings());
   overlayWindow = new BrowserWindow({
     x: bounds.x,
     y: bounds.y,

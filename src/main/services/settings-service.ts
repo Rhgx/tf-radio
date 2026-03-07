@@ -26,6 +26,14 @@ const settingsPatchSchema = z
     maxTracksPerUser: z.number().int().min(1).max(20),
     minimizeToTray: z.boolean(),
     overlayEnabled: z.boolean(),
+    overlayPosition: z.enum([
+      "top_left",
+      "top_right",
+      "center_left",
+      "center_right",
+      "bottom_left",
+      "bottom_right"
+    ]),
     chatSkipCommandEnabled: z.boolean(),
     chatPauseCommandEnabled: z.boolean(),
     chatStopCommandEnabled: z.boolean(),
@@ -77,6 +85,7 @@ function defaults(): Settings {
     maxTracksPerUser: 1,
     minimizeToTray: true,
     overlayEnabled: false,
+    overlayPosition: "top_left",
     chatSkipCommandEnabled: false,
     chatPauseCommandEnabled: false,
     chatStopCommandEnabled: false,
@@ -156,6 +165,18 @@ export class SettingsService {
 
     if (typeof existing.overlayEnabled !== "boolean") {
       existing.overlayEnabled = false;
+      this.store.set("settings", existing);
+    }
+
+    if (
+      existing.overlayPosition !== "top_left" &&
+      existing.overlayPosition !== "top_right" &&
+      existing.overlayPosition !== "center_left" &&
+      existing.overlayPosition !== "center_right" &&
+      existing.overlayPosition !== "bottom_left" &&
+      existing.overlayPosition !== "bottom_right"
+    ) {
+      existing.overlayPosition = "top_left";
       this.store.set("settings", existing);
     }
 
