@@ -1,3 +1,4 @@
+import type { ComponentChildren, JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   Activity,
@@ -101,7 +102,27 @@ function formatDurationLabel(totalSeconds: number | undefined): string {
 type SettingsTab = "general" | "audio" | "automation" | "ui";
 type CaptureTarget = "skip" | "pause" | "stop" | null;
 
+interface SettingsToggleProps {
+  checked: boolean;
+  onChange: JSX.GenericEventHandler<HTMLInputElement>;
+  children: ComponentChildren;
+}
+
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
+
+function SettingsToggle({ checked, onChange, children }: SettingsToggleProps) {
+  return (
+    <label class="toggle">
+      <span class="toggle-copy">{children}</span>
+      <span class="toggle-switch">
+        <input class="toggle-input" type="checkbox" checked={checked} onChange={onChange} />
+        <span class="toggle-track" aria-hidden="true">
+          <span class="toggle-thumb" />
+        </span>
+      </span>
+    </label>
+  );
+}
 
 function normalizeAcceleratorKey(event: KeyboardEvent): string | null {
   const { key } = event;
@@ -1134,23 +1155,21 @@ export function App() {
                     }
                   />
                 </div>
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft?.clearLogsOnStartup)}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              clearLogsOnStartup: (event.currentTarget as HTMLInputElement).checked
-                            }
-                          : current
-                      )
-                    }
-                  />
+                <SettingsToggle
+                  checked={Boolean(draft?.clearLogsOnStartup)}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            clearLogsOnStartup: (event.currentTarget as HTMLInputElement).checked
+                          }
+                        : current
+                    )
+                  }
+                >
                   Clear logs on startup
-                </label>
+                </SettingsToggle>
               </div>
 
               <div
@@ -1250,24 +1269,22 @@ export function App() {
                     }
                   />
                 </div>
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft?.mirrorToDefaultSpeaker)}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              mirrorToDefaultSpeaker: (event.currentTarget as HTMLInputElement)
-                                .checked
-                            }
-                          : current
-                      )
-                    }
-                  />
+                <SettingsToggle
+                  checked={Boolean(draft?.mirrorToDefaultSpeaker)}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            mirrorToDefaultSpeaker: (event.currentTarget as HTMLInputElement)
+                              .checked
+                          }
+                        : current
+                    )
+                  }
+                >
                   Mirror to default speakers
-                </label>
+                </SettingsToggle>
               </div>
 
               <div
@@ -1277,98 +1294,88 @@ export function App() {
                 aria-hidden={!isSettingsTabActive("automation")}
                 class={`settings-pane ${isSettingsTabActive("automation") ? "active" : ""}`}
               >
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft?.chatLinksEnabled)}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              chatLinksEnabled: (event.currentTarget as HTMLInputElement).checked
-                            }
-                          : current
-                      )
-                    }
-                  />
+                <SettingsToggle
+                  checked={Boolean(draft?.chatLinksEnabled)}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            chatLinksEnabled: (event.currentTarget as HTMLInputElement).checked
+                          }
+                        : current
+                    )
+                  }
+                >
                   <MessageSquare size={14} class="icon" />
                   Allow links in <code>?play</code> chat commands
-                </label>
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft?.chatResponsesEnabled)}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              chatResponsesEnabled: (event.currentTarget as HTMLInputElement).checked
-                            }
-                          : current
-                      )
-                    }
-                  />
+                </SettingsToggle>
+                <SettingsToggle
+                  checked={Boolean(draft?.chatResponsesEnabled)}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            chatResponsesEnabled: (event.currentTarget as HTMLInputElement).checked
+                          }
+                        : current
+                    )
+                  }
+                >
                   <MessageSquare size={14} class="icon" />
                   Bot chat responses (say)
-                </label>
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft?.chatSkipCommandEnabled)}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              chatSkipCommandEnabled: (event.currentTarget as HTMLInputElement)
-                                .checked
-                            }
-                          : current
-                      )
-                    }
-                  />
+                </SettingsToggle>
+                <SettingsToggle
+                  checked={Boolean(draft?.chatSkipCommandEnabled)}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            chatSkipCommandEnabled: (event.currentTarget as HTMLInputElement)
+                              .checked
+                          }
+                        : current
+                    )
+                  }
+                >
                   <SkipForward size={14} class="icon" />
                   Allow <code>?skip</code> in chat
-                </label>
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft?.chatPauseCommandEnabled)}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              chatPauseCommandEnabled: (event.currentTarget as HTMLInputElement)
-                                .checked
-                            }
-                          : current
-                      )
-                    }
-                  />
-                  <Square size={14} class="icon" />
+                </SettingsToggle>
+                <SettingsToggle
+                  checked={Boolean(draft?.chatPauseCommandEnabled)}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            chatPauseCommandEnabled: (event.currentTarget as HTMLInputElement)
+                              .checked
+                          }
+                        : current
+                    )
+                  }
+                >
+                  <Pause size={14} class="icon" />
                   Allow <code>?pause</code> / <code>?resume</code> in chat
-                </label>
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft?.chatStopCommandEnabled)}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              chatStopCommandEnabled: (event.currentTarget as HTMLInputElement).checked
-                            }
-                          : current
-                      )
-                    }
-                  />
+                </SettingsToggle>
+                <SettingsToggle
+                  checked={Boolean(draft?.chatStopCommandEnabled)}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            chatStopCommandEnabled: (event.currentTarget as HTMLInputElement).checked
+                          }
+                        : current
+                    )
+                  }
+                >
                   <Square size={14} class="icon" />
                   Allow <code>?stop</code> in chat
-                </label>
+                </SettingsToggle>
                 <div class="field">
                   <label class="label-with-icon">
                     <Command size={14} class="icon" />
@@ -1465,42 +1472,38 @@ export function App() {
                 aria-hidden={!isSettingsTabActive("ui")}
                 class={`settings-pane ${isSettingsTabActive("ui") ? "active" : ""}`}
               >
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft?.minimizeToTray)}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              minimizeToTray: (event.currentTarget as HTMLInputElement).checked
-                            }
-                          : current
-                      )
-                    }
-                  />
+                <SettingsToggle
+                  checked={Boolean(draft?.minimizeToTray)}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            minimizeToTray: (event.currentTarget as HTMLInputElement).checked
+                          }
+                        : current
+                    )
+                  }
+                >
                   <Minimize2 size={14} class="icon" />
                   Minimize/close to tray
-                </label>
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft?.overlayEnabled)}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              overlayEnabled: (event.currentTarget as HTMLInputElement).checked
-                            }
-                          : current
-                      )
-                    }
-                  />
+                </SettingsToggle>
+                <SettingsToggle
+                  checked={Boolean(draft?.overlayEnabled)}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            overlayEnabled: (event.currentTarget as HTMLInputElement).checked
+                          }
+                        : current
+                    )
+                  }
+                >
                   <PictureInPicture2 size={14} class="icon" />
                   Show top-left now playing overlay
-                </label>
+                </SettingsToggle>
               </div>
             </div>
 
