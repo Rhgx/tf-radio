@@ -109,6 +109,7 @@ interface SettingsToggleProps {
 }
 
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
+const SETTINGS_MODAL_TRANSITION_MS = 220;
 
 function SettingsToggle({ checked, onChange, children }: SettingsToggleProps) {
   return (
@@ -207,6 +208,8 @@ export function App() {
   const pendingLogsRef = useRef<string[]>([]);
   const flushLogsTimerRef = useRef<number | null>(null);
   const shouldStickLogsToBottomRef = useRef(true);
+  const settingsModalFrameRef = useRef<number | null>(null);
+  const settingsModalTimerRef = useRef<number | null>(null);
 
   const [settings, setSettings] = useState<Settings | null>(null);
   const [draft, setDraft] = useState<Settings | null>(null);
@@ -214,6 +217,7 @@ export function App() {
   const [logs, setLogs] = useState<string[]>([]);
   const [devices, setDevices] = useState<AudioOutputDevice[]>([]);
   const [launchHint, setLaunchHint] = useState<string>("");
+  const [settingsMounted, setSettingsMounted] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("general");
   const [captureTarget, setCaptureTarget] = useState<CaptureTarget>(null);
@@ -224,6 +228,48 @@ export function App() {
   function isSettingsTabActive(tab: SettingsTab): boolean {
     return settingsTab === tab;
   }
+
+  function clearSettingsModalAnimationHandles(): void {
+    if (settingsModalFrameRef.current !== null) {
+      window.cancelAnimationFrame(settingsModalFrameRef.current);
+      settingsModalFrameRef.current = null;
+    }
+
+    if (settingsModalTimerRef.current !== null) {
+      window.clearTimeout(settingsModalTimerRef.current);
+      settingsModalTimerRef.current = null;
+    }
+  }
+
+  function openSettingsModal(): void {
+    clearSettingsModalAnimationHandles();
+    if (settingsRef.current) {
+      setDraft(settingsRef.current);
+    }
+    setSettingsTab("general");
+    setCaptureTarget(null);
+    setSettingsMounted(true);
+    settingsModalFrameRef.current = window.requestAnimationFrame(() => {
+      setSettingsOpen(true);
+      settingsModalFrameRef.current = null;
+    });
+  }
+
+  function closeSettingsModal(options?: { resetDraft?: boolean }): void {
+    clearSettingsModalAnimationHandles();
+    setSettingsOpen(false);
+    settingsModalTimerRef.current = window.setTimeout(() => {
+      setSettingsMounted(false);
+      setSettingsTab("general");
+      setCaptureTarget(null);
+      if (options?.resetDraft ?? true) {
+        setDraft(settingsRef.current);
+      }
+      settingsModalTimerRef.current = null;
+    }, SETTINGS_MODAL_TRANSITION_MS);
+  }
+
+  useEffect(() => () => clearSettingsModalAnimationHandles(), []);
 
   function suppressMediaEventsTemporarily(durationMs = 150): void {
     mediaSuppressDepthRef.current += 1;
@@ -646,7 +692,7 @@ export function App() {
     setDraft(next);
     await syncAudioSettings(next);
     setCaptureTarget(null);
-    setSettingsOpen(false);
+    closeSettingsModal({ resetDraft: false });
   }
 
   async function handleAddToQueue(): Promise<void> {
@@ -702,13 +748,7 @@ export function App() {
             class="icon-btn"
             type="button"
             title="Settings"
-            onClick={() => {
-              if (settingsRef.current) {
-                setDraft(settingsRef.current);
-              }
-              setSettingsTab("general");
-              setSettingsOpen(true);
-            }}
+            onClick={openSettingsModal}
           >
             <SettingsIcon size={16} />
           </button>
@@ -950,17 +990,12 @@ export function App() {
         </section>
       </div>
 
-      {settingsOpen && (
+      {settingsMounted && (
         <div
-          class="modal-overlay"
-          onClick={() => {
-            setSettingsOpen(false);
-            setSettingsTab("general");
-            setCaptureTarget(null);
-            setDraft(settingsRef.current);
-          }}
+          class={`modal-overlay ${settingsOpen ? "open" : ""}`}
+          onClick={() => closeSettingsModal()}
         >
-          <div class="modal card" onClick={(event) => event.stopPropagation()}>
+          <div class={`modal card ${settingsOpen ? "open" : ""}`} onClick={(event) => event.stopPropagation()}>
             <div class="modal-top">
               <h2 class="heading-with-icon">
                 <SettingsIcon size={14} class="icon" />
@@ -970,12 +1005,7 @@ export function App() {
                 class="icon-btn"
                 type="button"
                 title="Close"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  setSettingsTab("general");
-                  setCaptureTarget(null);
-                  setDraft(settingsRef.current);
-                }}
+                onClick={() => closeSettingsModal()}
               >
                 <X size={14} />
               </button>
@@ -1517,12 +1547,7 @@ export function App() {
               <button
                 class="btn ghost"
                 type="button"
-                onClick={() => {
-                  setDraft(settingsRef.current);
-                  setSettingsTab("general");
-                  setCaptureTarget(null);
-                  setSettingsOpen(false);
-                }}
+                onClick={() => closeSettingsModal()}
               >
                 <span class="btn-content">Cancel</span>
               </button>

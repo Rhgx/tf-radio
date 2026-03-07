@@ -572,12 +572,38 @@ h2 {
   place-items: center;
   padding: 16px;
   background: rgba(8, 10, 14, 0.72);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  backdrop-filter: blur(0px);
+  transition:
+    opacity 220ms ease,
+    visibility 0s linear 220ms,
+    backdrop-filter 220ms ease;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+  transition-delay: 0s;
 }
 
 .modal {
   width: min(580px, 100%);
   max-height: calc(100vh - 32px);
   overflow-y: auto;
+  opacity: 0;
+  transform: translateY(18px) scale(0.98);
+  transition:
+    opacity 220ms ease,
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.modal.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .modal-top {
