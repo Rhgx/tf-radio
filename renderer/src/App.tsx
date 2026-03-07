@@ -224,6 +224,7 @@ export function App() {
   const [copiedLaunchHint, setCopiedLaunchHint] = useState(false);
   const [queueInput, setQueueInput] = useState("");
   const [addingToQueue, setAddingToQueue] = useState(false);
+  const [dismissedAlertKey, setDismissedAlertKey] = useState<string | null>(null);
 
   function isSettingsTabActive(tab: SettingsTab): boolean {
     return settingsTab === tab;
@@ -641,10 +642,21 @@ export function App() {
   }, [state]);
 
   const hintText = launchHint || state.setupIssue?.launchOptionsHint || null;
+  const alertKey = useMemo(
+    () => (setupMessage || hintText ? `${setupMessage ?? ""}::${hintText ?? ""}` : null),
+    [setupMessage, hintText]
+  );
+  const isAlertVisible = Boolean(alertKey) && dismissedAlertKey !== alertKey;
   const upcomingQueueCount = state.current ? Math.max(0, state.queue.length - 1) : state.queue.length;
   const isPlaybackPaused = state.playback === "paused";
   const canTogglePlayback =
     state.serviceRunning && Boolean(state.current) && state.playback !== "buffering";
+
+  useEffect(() => {
+    if (!alertKey) {
+      setDismissedAlertKey(null);
+    }
+  }, [alertKey]);
   const canStopPlayback = state.serviceRunning && (Boolean(state.current) || state.queue.length > 0);
 
   function copyLaunchHint(): void {
@@ -755,14 +767,27 @@ export function App() {
         </div>
       </header>
 
-      {(setupMessage || hintText) && (
+      {isAlertVisible && (
         <div class="alert-banner">
-          {setupMessage && (
-            <p class="alert-text">
-              <AlertTriangle size={14} class="icon" />
-              {setupMessage}
-            </p>
-          )}
+          <div class="alert-header">
+            {setupMessage ? (
+              <p class="alert-text">
+                <AlertTriangle size={14} class="icon" />
+                {setupMessage}
+              </p>
+            ) : (
+              <div />
+            )}
+            <button
+              class="alert-close-btn"
+              type="button"
+              title="Dismiss alert"
+              aria-label="Dismiss alert"
+              onClick={() => setDismissedAlertKey(alertKey)}
+            >
+              <X size={14} />
+            </button>
+          </div>
           {hintText && (
             <>
               <div class="alert-actions">

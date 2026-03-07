@@ -211,6 +211,13 @@ body {
   border-bottom: 1px solid color-mix(in oklab, var(--bad), black 62%);
 }
 
+.alert-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .alert-text {
   margin: 0;
   font-size: 0.8rem;
@@ -218,6 +225,36 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.alert-close-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid color-mix(in oklab, var(--bad), black 52%);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--bad), black 76%);
+  color: color-mix(in oklab, var(--bad), white 26%);
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.alert-close-btn:hover {
+  background: color-mix(in oklab, var(--bad), black 68%);
+  border-color: color-mix(in oklab, var(--bad), black 36%);
+  color: color-mix(in oklab, var(--bad), white 38%);
+}
+
+.alert-close-btn:active {
+  transform: translateY(1px);
 }
 
 .alert-actions {
